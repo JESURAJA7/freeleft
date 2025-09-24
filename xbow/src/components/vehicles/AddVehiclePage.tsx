@@ -81,7 +81,7 @@ export const AddVehiclePage: React.FC = () => {
   // Helper function to check if field should be disabled
   const isFieldDisabled = (field: string): boolean => {
     const { vehicleType } = formData;
-    
+
     switch (field) {
       case 'vehicleSize':
         return vehicleType === '2-wheel' || vehicleType === '3-wheel';
@@ -128,7 +128,7 @@ export const AddVehiclePage: React.FC = () => {
       vehicleType,
       vehicleSize: defaultSize,
       // Reset dimensions for 2-wheel and 3-wheel
-      dimensions: (vehicleType === '2-wheel' || vehicleType === '3-wheel') 
+      dimensions: (vehicleType === '2-wheel' || vehicleType === '3-wheel')
         ? { length: 0, breadth: 0 }
         : prev.dimensions,
       // Reset body type for 2-wheel
@@ -136,7 +136,7 @@ export const AddVehiclePage: React.FC = () => {
       // Reset tarpaulin for 2-wheel and 3-wheel
       tarpaulin: (vehicleType === '2-wheel' || vehicleType === '3-wheel') ? 'none' : prev.tarpaulin,
       // Reset passing limit unit
-      passingLimit: (vehicleType === '2-wheel' || vehicleType === '3-wheel') 
+      passingLimit: (vehicleType === '2-wheel' || vehicleType === '3-wheel')
         ? (prev.passingLimit * 1000) // Convert tons to kg
         : Math.round(prev.passingLimit / 1000) // Convert kg to tons
     }));
@@ -166,12 +166,12 @@ export const AddVehiclePage: React.FC = () => {
   };
 
   const handleAddPhoto = () => {
-    const optionalPhotoCount = photos.filter(photo => 
+    const optionalPhotoCount = photos.filter(photo =>
       photo.type.startsWith('optional')
     ).length;
-    
+
     const newPhotoType = optionalPhotoCount > 0 ? `optional_${optionalPhotoCount}` : 'optional_1';
-    
+
     setPhotos(prev => [
       ...prev,
       { type: newPhotoType, file: null, preview: '' }
@@ -250,12 +250,12 @@ export const AddVehiclePage: React.FC = () => {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if(!profileComplete) {
+    if (!profileComplete) {
       toast.error('Please complete your profile first');
       navigate('/profile/complete');
       return;
     }
-    
+
     if (!validateForm()) return;
 
     setSubmitting(true);
@@ -346,17 +346,18 @@ export const AddVehiclePage: React.FC = () => {
                   className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all duration-200"
                   required
                 >
-                  <option value="2-wheel">2-wheeler Bike</option>
-                  <option value="3-wheel">3-wheeler Auto</option>
-                  <option value="4-wheel">4-wheeler pickup/Dost/Tata Ace</option>
-                  <option value="6-wheel">6-wheeler Eicher/Canter/JCB</option>
-                  <option value="trailer">trailer/Open Truck/Crane</option>
-                  <option value="10-wheel">10-wheeler Lorry</option>
-                  <option value="12-wheel">12-wheeler Lorry</option>
-                  <option value="14-wheel">14-wheeler Lorry</option>
-                  <option value="16-wheel">16-wheeler Lorry</option>
-                  <option value="18-wheel">18-wheeler Lorry</option>
-                  <option value="20-wheel">20-wheeler Lorry</option>
+                  <option value="2-wheel">🏍️  2-wheeler Bike</option>
+                  <option value="3-wheel">🛺  3-wheeler Auto</option>
+                  <option value="4-wheel">🚚  4-wheeler Pickup / Dost / Tata Ace</option>
+                  <option value="6-wheel">🚛  6-wheeler Eicher / Canter / JCB</option>
+                  <option value="trailer">🛻  Trailer / Open Truck / Crane</option>
+                  <option value="10-wheel">🚛  10-wheeler Lorry</option>
+                  <option value="12-wheel">🚛  12-wheeler Lorry</option>
+                  <option value="14-wheel">🚛  14-wheeler Lorry</option>
+                  <option value="16-wheel">🚛  16-wheeler Lorry</option>
+                  <option value="18-wheel">🚛  18-wheeler Lorry</option>
+                  <option value="20-wheel">🚛  20-wheeler Lorry</option>
+
                 </select>
               </div>
 
@@ -408,7 +409,7 @@ export const AddVehiclePage: React.FC = () => {
                 label="Vehicle Number *"
                 value={formData.vehicleNumber}
                 onChange={(value) => setFormData(prev => ({ ...prev, vehicleNumber: value.toUpperCase() }))}
-                placeholder="e.g., KA01AB1234"
+                placeholder="e.g., TN01AB1234"
                 required
               />
 
@@ -417,6 +418,7 @@ export const AddVehiclePage: React.FC = () => {
                 type="number"
                 value={formData.passingLimit.toString()}
                 onChange={(value) => setFormData(prev => ({ ...prev, passingLimit: Number(value) || 0 }))}
+                placeholder='e.g., 10'
                 required
               />
 

@@ -50,7 +50,7 @@ interface FormData {
 export const PostLoadPage = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
-  
+
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [profileComplete, setProfileComplete] = useState(false);
@@ -136,8 +136,8 @@ export const PostLoadPage = () => {
 
   // Helper function to check if vehicle size should be disabled
   const isVehicleSizeDisabled = (): boolean => {
-    return formData.vehicleRequirement.vehicleType === '2-wheel' || 
-           formData.vehicleRequirement.vehicleType === '3-wheel';
+    return formData.vehicleRequirement.vehicleType === '2-wheel' ||
+      formData.vehicleRequirement.vehicleType === '3-wheel';
   };
 
   // Handle vehicle type change
@@ -184,38 +184,38 @@ export const PostLoadPage = () => {
   const handlePhotoUpload = (materialIndex: number, photoType: string, file: File) => {
     const updatedMaterials = [...materials];
     const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
-    
+
     if (photoIndex !== -1) {
       if (updatedMaterials[materialIndex].photos[photoIndex].preview) {
         URL.revokeObjectURL(updatedMaterials[materialIndex].photos[photoIndex].preview);
       }
-      
+
       updatedMaterials[materialIndex].photos[photoIndex] = {
         type: photoType,
         file,
         preview: URL.createObjectURL(file)
       };
     }
-    
+
     setMaterials(updatedMaterials);
   };
 
   const handleRemovePhoto = (materialIndex: number, photoType: string) => {
     const updatedMaterials = [...materials];
     const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
-    
+
     if (photoIndex !== -1) {
       if (updatedMaterials[materialIndex].photos[photoIndex].preview) {
         URL.revokeObjectURL(updatedMaterials[materialIndex].photos[photoIndex].preview);
       }
-      
+
       updatedMaterials[materialIndex].photos[photoIndex] = {
         type: photoType,
         file: null,
         preview: ''
       };
     }
-    
+
     setMaterials(updatedMaterials);
   };
 
@@ -272,7 +272,7 @@ export const PostLoadPage = () => {
         URL.revokeObjectURL(photo.preview);
       }
     });
-    
+
     const updatedMaterials = materials.filter((_, i) => i !== index);
     setMaterials(updatedMaterials);
   };
@@ -319,7 +319,7 @@ export const PostLoadPage = () => {
     for (let i = 0; i < materials.length; i++) {
       const material = materials[i];
       const requiredPhotoTypes = ['material_front', 'material_side', 'material_top', 'packing_style'];
-      
+
       for (const photoType of requiredPhotoTypes) {
         const hasPhoto = material.photos.some(photo => photo.type === photoType && photo.file);
         if (!hasPhoto) {
@@ -327,7 +327,7 @@ export const PostLoadPage = () => {
           return false;
         }
       }
-      
+
       if (!material.name.trim()) {
         toast.error(`Please enter name for material ${i + 1}`);
         return false;
@@ -412,7 +412,7 @@ export const PostLoadPage = () => {
         totalWeight: material.totalWeight,
         photos: []
       }));
-      
+
       formDataObj.append('materials', JSON.stringify(materialsForJSON));
 
       materials.forEach((material, materialIndex) => {
@@ -655,17 +655,18 @@ export const PostLoadPage = () => {
                   className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                   required
                 >
-                  <option value="2-wheel">2-wheel Bike</option>
-                  <option value="3-wheel">3-wheel Auto</option>
-                  <option value="4-wheel">4-wheel pickup/ Dost / Tata Ace</option>
-                  <option value="6-wheel">6-wheel Eicher /Canter/Jcb</option>
-                  <option value="trailer">trailer/Open Truck/Crane</option>
-                  <option value="10-wheel">10-wheel Lorry</option>
-                  <option value="12-wheel">12-wheel Lorry</option>
-                  <option value="14-wheel">14-wheel Lorry</option>
-                  <option value="16-wheel">16-wheel Lorry</option>
-                  <option value="18-wheel">18-wheel Lorry</option>
-                  <option value="20-wheel">20-wheel Lorry</option>
+                  <option value="2-wheel">🏍️  2-wheeler Bike</option>
+                  <option value="3-wheel">🛺  3-wheeler Auto</option>
+                  <option value="4-wheel">🚚  4-wheeler Pickup / Dost / Tata Ace</option>
+                  <option value="6-wheel">🚛  6-wheeler Eicher / Canter / JCB</option>
+                  <option value="trailer">🛻  Trailer / Open Truck / Crane</option>
+                  <option value="10-wheel">🚛  10-wheeler Lorry</option>
+                  <option value="12-wheel">🚛  12-wheeler Lorry</option>
+                  <option value="14-wheel">🚛  14-wheeler Lorry</option>
+                  <option value="16-wheel">🚛  16-wheeler Lorry</option>
+                  <option value="18-wheel">🚛  18-wheeler Lorry</option>
+                  <option value="20-wheel">🚛  20-wheeler Lorry</option>
+
                 </select>
               </div>
 
@@ -873,11 +874,10 @@ export const PostLoadPage = () => {
                             />
                             <label
                               htmlFor={`photo-${index}-${photoConfig.type}`}
-                              className={`block text-sm font-medium cursor-pointer transition-colors duration-200 ${
-                                photo?.file
+                              className={`block text-sm font-medium cursor-pointer transition-colors duration-200 ${photo?.file
                                   ? 'text-green-600 hover:text-green-700'
                                   : 'text-blue-600 hover:text-blue-700'
-                              }`}
+                                }`}
                             >
                               {photoConfig.label}
                             </label>
@@ -890,10 +890,10 @@ export const PostLoadPage = () => {
                         );
                       })}
                     </div>
-                    
+
                     <div className="mt-6 p-4 bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-xl">
                       <p className="text-sm text-blue-800">
-                        <strong>Photo Requirements:</strong> Please upload clear photos of your material from all angles. 
+                        <strong>Photo Requirements:</strong> Please upload clear photos of your material from all angles.
                         This helps carriers understand the load requirements better.
                       </p>
                     </div>
