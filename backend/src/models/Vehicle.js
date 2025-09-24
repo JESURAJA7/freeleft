@@ -17,7 +17,7 @@ const vehicleSchema = new mongoose.Schema({
   },
   vehicleSize: {
     type: Number,
-    enum: [6, 8.5, 10, 14, 17, 19, 20, 22, 24],
+    
     required: true
   },
  
@@ -36,7 +36,7 @@ const vehicleSchema = new mongoose.Schema({
     type: Number,
     required: true,
     min: 1,
-    max: 50
+    max: 10000
   },
  availability: {
   type: Date,
@@ -54,11 +54,11 @@ bodyType: {
     enum: ['one', 'two', 'none'],
     required: true
   },
-  trailerType: {
-    type: String,
-    enum: ['lowbed', 'semi-lowbed', 'hydraulic-axle-8', 'crane-14t', 'crane-25t', 'crane-50t', 'crane-100t', 'crane-200t', 'none'],
-    default: 'none'
-  },
+  // trailerType: {
+  //   type: String,
+  //   enum: ['lowbed', 'semi-lowbed', 'hydraulic-axle-8', 'crane-14t', 'crane-25t', 'crane-50t', 'crane-100t', 'crane-200t', 'none'],
+  //   default: 'none'
+  // },
 operatingAreas: [
   {
     state: { type: String, required: true },

@@ -88,7 +88,7 @@ export const AddVehiclePage: React.FC = () => {
       case 'dimensions':
         return vehicleType === '2-wheel' || vehicleType === '3-wheel';
       case 'bodyType':
-        return vehicleType === '2-wheel';
+        return vehicleType === '2-wheel' || vehicleType === '3-wheel';
       case 'tarpaulin':
         return vehicleType === '2-wheel' || vehicleType === '3-wheel';
       case 'trailerType':
