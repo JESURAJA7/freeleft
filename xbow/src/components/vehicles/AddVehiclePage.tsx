@@ -47,9 +47,14 @@ export const AddVehiclePage: React.FC = () => {
     { type: 'front', file: null, preview: '' },
     { type: 'side', file: null, preview: '' },
     { type: 'back', file: null, preview: '' },
-    { type: 'rc_book', file: null, preview: '' },
+    { type: 'rc_book_front', file: null, preview: '' },
+    { type: 'rc_book_back', file: null, preview: '' },
+    { type: 'driver_aadhar_front', file: null, preview: '' },
+    { type: 'driver_aadhar_back', file: null, preview: '' },
+    { type: 'driver_license_front', file: null, preview: '' },
+    { type: 'driver_license_back', file: null, preview: '' },
     { type: 'pancard', file: null, preview: '' },
-    { type: 'optional', file: null, preview: '' }
+    { type: 'Additional', file: null, preview: '' }
   ]);
 
   // Helper function to get available vehicle sizes based on vehicle type

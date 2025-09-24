@@ -82,7 +82,7 @@ const loadSchema = new mongoose.Schema({
     size: {
       type: Number,
       required: true,
-      enum: [20,40,50,60,70,110]
+      
     },
     trailerType: {
       type: String,

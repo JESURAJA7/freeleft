@@ -25,9 +25,13 @@ export const PhotoUploadGrid: React.FC<PhotoUploadGridProps> = ({
       front: 'Front View',
       side: 'Side View', 
       back: 'Back View',
-      rc_book: 'RC Book',
-      aadhaar_front: 'Aadhaar Front',
-      aadhaar_back: 'Aadhaar Back',
+      rc_book_front: 'RC Book Front',
+      rc_book_back: 'RC Book Back',
+      driver_aadhar_front: 'Driver Aadhaar Front',
+      driver_aadhar_back: 'Driver Aadhaar Back',
+      driver_license_front: 'Driver License Front',
+      driver_license_back: 'Driver License Back',
+      pancard: 'PAN Card',
       optional: 'Additional Photo',
       optional_1: 'Additional Photo 1',
       optional_2: 'Additional Photo 2',
@@ -38,7 +42,7 @@ export const PhotoUploadGrid: React.FC<PhotoUploadGridProps> = ({
   };
 
   const isRequired = (type: string): boolean => {
-    return ['front', 'side', 'back', 'license', 'rc_book', 'aadhaar_front', 'aadhaar_back'].includes(type);
+    return ['front', 'side', 'back', 'rc_book_front' , 'rc_book_back' ,'driver_aadhar_front', 'driver_aadhar_back' , 'driver_license_front', 'driver_license_back'].includes(type);
   };
 
   const isOptional = (type: string): boolean => {
