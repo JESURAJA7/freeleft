@@ -17,7 +17,6 @@ import { useCloudinaryUpload } from '../../hooks/useCloudinaryUpload';
 import { vehicleAPI, profileAPI } from '../../services/api';
 import { VehiclePhoto, VehicleFormData, OperatingArea } from '../../types/index';
 import toast from 'react-hot-toast';
-import { p } from 'framer-motion/client';
 
 export const AddVehiclePage: React.FC = () => {
   const { user } = useAuth();
@@ -30,8 +29,7 @@ export const AddVehiclePage: React.FC = () => {
 
   const [formData, setFormData] = useState<VehicleFormData>({
     vehicleType: '10-wheel',
-    vehicleSize: 14,
-    
+    vehicleSize: 20,
     dimensions: {
       length: 14,
       breadth: 6
@@ -49,11 +47,100 @@ export const AddVehiclePage: React.FC = () => {
     { type: 'front', file: null, preview: '' },
     { type: 'side', file: null, preview: '' },
     { type: 'back', file: null, preview: '' },
-    // { type: 'license', file: null, preview: '' },
     { type: 'rc_book', file: null, preview: '' },
     { type: 'pancard', file: null, preview: '' },
     { type: 'optional', file: null, preview: '' }
   ]);
+
+  // Helper function to get available vehicle sizes based on vehicle type
+  const getAvailableVehicleSizes = (vehicleType: string): number[] => {
+    switch (vehicleType) {
+      case '4-wheel':
+        return [6, 8.5, 10];
+      case '6-wheel':
+        return [14, 17, 19, 20, 22, 24, 26, 32];
+      case '10-wheel':
+        return [20, 22];
+      case '12-wheel':
+        return [22, 24, 26];
+      case '14-wheel':
+        return [24, 26];
+      case '16-wheel':
+        return [24, 26];
+      case '18-wheel':
+        return [24, 26];
+      case '20-wheel':
+        return [32];
+      case 'trailer':
+        return [20, 22, 24, 26, 32, 40, 50, 60, 70, 110];
+      default:
+        return []; // For 2-wheel and 3-wheel, no sizes available
+    }
+  };
+
+  // Helper function to check if field should be disabled
+  const isFieldDisabled = (field: string): boolean => {
+    const { vehicleType } = formData;
+    
+    switch (field) {
+      case 'vehicleSize':
+        return vehicleType === '2-wheel' || vehicleType === '3-wheel';
+      case 'dimensions':
+        return vehicleType === '2-wheel' || vehicleType === '3-wheel';
+      case 'bodyType':
+        return vehicleType === '2-wheel';
+      case 'tarpaulin':
+        return vehicleType === '2-wheel' || vehicleType === '3-wheel';
+      case 'trailerType':
+        return true; // Temporarily disabled as requested
+      default:
+        return false;
+    }
+  };
+
+  // Helper function to get body type options based on vehicle type
+  const getBodyTypeOptions = () => {
+    if (formData.vehicleType === '3-wheel') {
+      return [
+        { value: 'open', label: 'Open' },
+        { value: 'container', label: 'Container' }
+      ];
+    }
+    return [
+      { value: 'open', label: 'Open' },
+      { value: 'container', label: 'Container' },
+      { value: 'darus', label: 'Tarus' }
+    ];
+  };
+
+  // Helper function to get passing limit unit
+  const getPassingLimitUnit = (): string => {
+    return (formData.vehicleType === '2-wheel' || formData.vehicleType === '3-wheel') ? 'kg' : 'Tons';
+  };
+
+  // Handle vehicle type change
+  const handleVehicleTypeChange = (vehicleType: string) => {
+    const availableSizes = getAvailableVehicleSizes(vehicleType);
+    const defaultSize = availableSizes.length > 0 ? availableSizes[0] : 0;
+
+    setFormData(prev => ({
+      ...prev,
+      vehicleType,
+      vehicleSize: defaultSize,
+      // Reset dimensions for 2-wheel and 3-wheel
+      dimensions: (vehicleType === '2-wheel' || vehicleType === '3-wheel') 
+        ? { length: 0, breadth: 0 }
+        : prev.dimensions,
+      // Reset body type for 2-wheel
+      bodyType: vehicleType === '2-wheel' ? 'open' : prev.bodyType,
+      // Reset tarpaulin for 2-wheel and 3-wheel
+      tarpaulin: (vehicleType === '2-wheel' || vehicleType === '3-wheel') ? 'none' : prev.tarpaulin,
+      // Reset passing limit unit
+      passingLimit: (vehicleType === '2-wheel' || vehicleType === '3-wheel') 
+        ? (prev.passingLimit * 1000) // Convert tons to kg
+        : Math.round(prev.passingLimit / 1000) // Convert kg to tons
+    }));
+  };
 
   useEffect(() => {
     checkProfileCompletion();
@@ -78,8 +165,7 @@ export const AddVehiclePage: React.FC = () => {
     }
   };
 
-   const handleAddPhoto = () => {
-    // Count existing optional photos to create unique type
+  const handleAddPhoto = () => {
     const optionalPhotoCount = photos.filter(photo => 
       photo.type.startsWith('optional')
     ).length;
@@ -92,9 +178,7 @@ export const AddVehiclePage: React.FC = () => {
     ]);
   };
 
-
   const handlePhotoUpload = async (index: number, file: File) => {
-    // Update preview immediately
     const updatedPhotos = [...photos];
     updatedPhotos[index] = {
       ...updatedPhotos[index],
@@ -134,8 +218,8 @@ export const AddVehiclePage: React.FC = () => {
   };
 
   const validateForm = (): boolean => {
-    // Check required photos
-    const requiredPhotoTypes = ['front', 'side', 'back', 'license', 'rc_book'];
+    // Check required photos - adjust based on vehicle type
+    const requiredPhotoTypes = ['front', 'side', 'back', 'rc_book'];
     const uploadedRequiredPhotos = photos.filter(photo =>
       requiredPhotoTypes.includes(photo.type) && photo.file
     );
@@ -155,6 +239,12 @@ export const AddVehiclePage: React.FC = () => {
       return false;
     }
 
+    // Check vehicle size for applicable vehicle types
+    if (!isFieldDisabled('vehicleSize') && !formData.vehicleSize) {
+      toast.error('Please select vehicle size');
+      return false;
+    }
+
     return true;
   };
 
@@ -166,32 +256,27 @@ export const AddVehiclePage: React.FC = () => {
       return;
     }
     
-
     if (!validateForm()) return;
 
     setSubmitting(true);
 
     try {
-      // Prepare FormData
       const formDataObj = new FormData();
 
-      // Append vehicle details
       Object.entries(formData).forEach(([key, value]) => {
         if (typeof value === "object") {
-          formDataObj.append(key, JSON.stringify(value)); // stringify objects like dimensions, operatingAreas
+          formDataObj.append(key, JSON.stringify(value));
         } else {
           formDataObj.append(key, value as any);
         }
       });
 
-      // Append photos
       photos.forEach((photo) => {
         if (photo.file) {
-          formDataObj.append("images", photo.file); // 'images' must match backend multer field
+          formDataObj.append("images", photo.file);
         }
       });
 
-      // Send as multipart/form-data
       const response = await vehicleAPI.createVehicle(formDataObj, {
         headers: {
           "Content-Type": "multipart/form-data"
@@ -210,7 +295,6 @@ export const AddVehiclePage: React.FC = () => {
     }
   };
 
-
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-slate-50 to-emerald-50">
@@ -223,10 +307,11 @@ export const AddVehiclePage: React.FC = () => {
     return null;
   }
 
+  const availableVehicleSizes = getAvailableVehicleSizes(formData.vehicleType);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-emerald-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -237,7 +322,6 @@ export const AddVehiclePage: React.FC = () => {
         </motion.div>
 
         <form onSubmit={handleSubmit} className="space-y-8">
-          {/* Vehicle Information */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -258,7 +342,7 @@ export const AddVehiclePage: React.FC = () => {
                 </label>
                 <select
                   value={formData.vehicleType}
-                  onChange={(e) => setFormData(prev => ({ ...prev, vehicleType: e.target.value }))}
+                  onChange={(e) => handleVehicleTypeChange(e.target.value)}
                   className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all duration-200"
                   required
                 >
@@ -276,48 +360,52 @@ export const AddVehiclePage: React.FC = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  Vehicle Length Size (ft) *
-                </label>
-                <select
-                  value={formData.vehicleSize}
-                  onChange={(e) => setFormData(prev => ({ ...prev, vehicleSize: Number(e.target.value) }))}
-                  className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all duration-200"
-                  required
-                >
-                  {[20,40,50,60,70,110].map(size => (
-                    <option key={size} value={size}>{size} ft</option>
-                  ))}
-                </select>
-              </div>
+              {!isFieldDisabled('vehicleSize') && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Vehicle Length Size (ft) *
+                  </label>
+                  <select
+                    value={formData.vehicleSize}
+                    onChange={(e) => setFormData(prev => ({ ...prev, vehicleSize: Number(e.target.value) }))}
+                    className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all duration-200"
+                    required
+                  >
+                    {availableVehicleSizes.map(size => (
+                      <option key={size} value={size}>{size} ft</option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-            
+              {!isFieldDisabled('dimensions') && (
+                <>
+                  <Input
+                    label="Width (ft) *"
+                    type="number"
+                    value={formData.dimensions.length.toString()}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      dimensions: { ...prev.dimensions, length: Number(value) || 0 }
+                    }))}
+                    required
+                  />
+
+                  <Input
+                    label="Height (ft) *"
+                    type="number"
+                    value={formData.dimensions.breadth.toString()}
+                    onChange={(value) => setFormData(prev => ({
+                      ...prev,
+                      dimensions: { ...prev.dimensions, breadth: Number(value) || 0 }
+                    }))}
+                    required
+                  />
+                </>
+              )}
 
               <Input
-                label="Width (ft)"
-                type="number"
-                value={formData.dimensions.length.toString()}
-                onChange={(value) => setFormData(prev => ({
-                  ...prev,
-                  dimensions: { ...prev.dimensions, length: Number(value) || 0 }
-                }))}
-                required
-              />
-
-              <Input
-                label="Height (ft)"
-                type="number"
-                value={formData.dimensions.breadth.toString()}
-                onChange={(value) => setFormData(prev => ({
-                  ...prev,
-                  dimensions: { ...prev.dimensions, breadth: Number(value) || 0 }
-                }))}
-                required
-              />
-
-              <Input
-                label="Vehicle Number"
+                label="Vehicle Number *"
                 value={formData.vehicleNumber}
                 onChange={(value) => setFormData(prev => ({ ...prev, vehicleNumber: value.toUpperCase() }))}
                 placeholder="e.g., KA01AB1234"
@@ -325,7 +413,7 @@ export const AddVehiclePage: React.FC = () => {
               />
 
               <Input
-                label="Passing Limit (Tons)"
+                label={`Passing Limit (${getPassingLimitUnit()}) *`}
                 type="number"
                 value={formData.passingLimit.toString()}
                 onChange={(value) => setFormData(prev => ({ ...prev, passingLimit: Number(value) || 0 }))}
@@ -346,81 +434,57 @@ export const AddVehiclePage: React.FC = () => {
                 />
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  Vehicle Body Type *
-                </label>
-                <div className="grid grid-cols-3 gap-3">
-                  {[
-                    { value: 'open', label: 'Open' },
-                    { value: 'container', label: 'Container' },
-                    { value: 'darus', label: 'Tarus' }
-                  ].map(option => (
-                    <label key={option.value} className="relative cursor-pointer">
-                      <input
-                        type="radio"
-                        name="bodyType"
-                        value={option.value}
-                        checked={formData.bodyType === option.value}
-                        onChange={() => setFormData(prev => ({ ...prev, bodyType: option.value as any }))}
-                        className="sr-only"
-                      />
-                      <div className={`
-                        p-4 text-center rounded-xl border-2 transition-all duration-200
-                        ${formData.bodyType === option.value
-                          ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
-                          : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-300'
-                        }
-                      `}>
-                        <span className="text-sm font-medium">{option.label}</span>
-                      </div>
-                    </label>
-                  ))}
+              {!isFieldDisabled('bodyType') && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Vehicle Body Type *
+                  </label>
+                  <div className="grid grid-cols-3 gap-3">
+                    {getBodyTypeOptions().map(option => (
+                      <label key={option.value} className="relative cursor-pointer">
+                        <input
+                          type="radio"
+                          name="bodyType"
+                          value={option.value}
+                          checked={formData.bodyType === option.value}
+                          onChange={() => setFormData(prev => ({ ...prev, bodyType: option.value as any }))}
+                          className="sr-only"
+                        />
+                        <div className={`
+                          p-4 text-center rounded-xl border-2 transition-all duration-200
+                          ${formData.bodyType === option.value
+                            ? 'border-emerald-500 bg-emerald-50 text-emerald-700'
+                            : 'border-slate-300 bg-white text-slate-700 hover:border-emerald-300'
+                          }
+                        `}>
+                          <span className="text-sm font-medium">{option.label}</span>
+                        </div>
+                      </label>
+                    ))}
+                  </div>
                 </div>
-              </div>
+              )}
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  Tarpaulin *
-                </label>
-                <select
-                  value={formData.tarpaulin}
-                  onChange={(e) => setFormData(prev => ({ ...prev, tarpaulin: e.target.value as any }))}
-                  className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all duration-200"
-                  required
-                >
-                  <option value="one">One</option>
-                  <option value="two">Two</option>
-                  <option value="none">None</option>
-                </select>
-              </div>
-
-              {/* <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  Trailer Type
-                </label>
-                <select
-                  value={formData.trailerType}
-                  onChange={(e) => setFormData(prev => ({ ...prev, trailerType: e.target.value as any }))}
-                  className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all duration-200"
-                >
-                  <option value="none">None</option>
-                  <option value="lowbed">Lowbed Trailer</option>
-                  <option value="semi-lowbed">Semi-Lowbed</option>
-                  <option value="high-bed">High Bed Trailer</option>
-                  <option value="flatbed">Flat bed 20 feet</option>
-                  <option value="hydraulic-axle-8">Hydraulic Axle (8 Axle)</option>
-                  <option value="crane-14t">Crane (14T)</option>
-                  <option value="crane-25t">Crane (25T)</option>
-                  <option value="crane-50t">Crane (50T)</option>
-                  <option value="crane-100t">Crane (100T)</option>
-                  <option value="crane-200t">Crane (200T)</option>
-                </select>
-              </div> */}
+              {!isFieldDisabled('tarpaulin') && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Tarpaulin *
+                  </label>
+                  <select
+                    value={formData.tarpaulin}
+                    onChange={(e) => setFormData(prev => ({ ...prev, tarpaulin: e.target.value as any }))}
+                    className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none focus:ring-2 focus:ring-emerald-200 transition-all duration-200"
+                    required
+                  >
+                    <option value="one">One</option>
+                    <option value="two">Two</option>
+                    <option value="none">None</option>
+                  </select>
+                </div>
+              )}
             </div>
           </motion.div>
 
-          {/* Operating Areas */}
           <OperatingAreaForm
             operatingAreas={formData.operatingAreas}
             onAreaChange={handleAreaChange}
@@ -428,7 +492,6 @@ export const AddVehiclePage: React.FC = () => {
             onRemoveArea={removeOperatingArea}
           />
 
-          {/* Vehicle Photos */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
@@ -468,7 +531,6 @@ export const AddVehiclePage: React.FC = () => {
             </div>
           </motion.div>
 
-          {/* Submit Button */}
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}

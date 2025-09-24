@@ -59,7 +59,6 @@ export const PostLoadPage = () => {
     type: 'loading' | 'unloading';
   }>({ isOpen: false, type: 'loading' });
 
-  // New states for vehicle matching and bidding
   const [showVehicleMatching, setShowVehicleMatching] = useState(false);
   const [showBiddingPage, setShowBiddingPage] = useState(false);
   const [matchingVehicles, setMatchingVehicles] = useState(false);
@@ -109,7 +108,53 @@ export const PostLoadPage = () => {
     }
   ]);
 
-  // Helper function to validate MongoDB ObjectId
+  // Helper function to get available vehicle sizes based on vehicle type
+  const getAvailableVehicleSizes = (vehicleType: string): number[] => {
+    switch (vehicleType) {
+      case '4-wheel':
+        return [6, 8.5, 10];
+      case '6-wheel':
+        return [14, 17, 19, 20, 22, 24, 26, 32];
+      case '10-wheel':
+        return [20, 22];
+      case '12-wheel':
+        return [22, 24, 26];
+      case '14-wheel':
+        return [24, 26];
+      case '16-wheel':
+        return [24, 26];
+      case '18-wheel':
+        return [24, 26];
+      case '20-wheel':
+        return [32];
+      case 'trailer':
+        return [20, 22, 24, 26, 32, 40, 50, 60, 70, 110];
+      default:
+        return []; // For 2-wheel and 3-wheel, no sizes available
+    }
+  };
+
+  // Helper function to check if vehicle size should be disabled
+  const isVehicleSizeDisabled = (): boolean => {
+    return formData.vehicleRequirement.vehicleType === '2-wheel' || 
+           formData.vehicleRequirement.vehicleType === '3-wheel';
+  };
+
+  // Handle vehicle type change
+  const handleVehicleTypeChange = (vehicleType: string) => {
+    const availableSizes = getAvailableVehicleSizes(vehicleType);
+    const defaultSize = availableSizes.length > 0 ? availableSizes[0] : 0;
+
+    setFormData(prev => ({
+      ...prev,
+      vehicleRequirement: {
+        ...prev.vehicleRequirement,
+        vehicleType,
+        size: defaultSize
+      }
+    }));
+  };
+
   const isValidObjectId = (id: string): boolean => {
     return /^[0-9a-fA-F]{24}$/.test(id);
   };
@@ -136,13 +181,11 @@ export const PostLoadPage = () => {
     }
   };
 
-  // Handle photo upload - store file locally like vehicle upload
   const handlePhotoUpload = (materialIndex: number, photoType: string, file: File) => {
     const updatedMaterials = [...materials];
     const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
     
     if (photoIndex !== -1) {
-      // Clean up previous preview URL
       if (updatedMaterials[materialIndex].photos[photoIndex].preview) {
         URL.revokeObjectURL(updatedMaterials[materialIndex].photos[photoIndex].preview);
       }
@@ -162,7 +205,6 @@ export const PostLoadPage = () => {
     const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
     
     if (photoIndex !== -1) {
-      // Clean up preview URL
       if (updatedMaterials[materialIndex].photos[photoIndex].preview) {
         URL.revokeObjectURL(updatedMaterials[materialIndex].photos[photoIndex].preview);
       }
@@ -225,7 +267,6 @@ export const PostLoadPage = () => {
   };
 
   const removeMaterial = (index: number) => {
-    // Clean up preview URLs
     materials[index].photos.forEach(photo => {
       if (photo.preview) {
         URL.revokeObjectURL(photo.preview);
@@ -275,7 +316,6 @@ export const PostLoadPage = () => {
   };
 
   const validateForm = (): boolean => {
-    // Check if all materials have required photos
     for (let i = 0; i < materials.length; i++) {
       const material = materials[i];
       const requiredPhotoTypes = ['material_front', 'material_side', 'material_top', 'packing_style'];
@@ -353,10 +393,8 @@ export const PostLoadPage = () => {
     setSubmitting(true);
 
     try {
-      // Create FormData like vehicle creation
       const formDataObj = new FormData();
 
-      // Append load details
       formDataObj.append('loadingLocation', JSON.stringify(formData.loadingLocation));
       formDataObj.append('unloadingLocation', JSON.stringify(formData.unloadingLocation));
       formDataObj.append('vehicleRequirement', JSON.stringify(formData.vehicleRequirement));
@@ -365,7 +403,6 @@ export const PostLoadPage = () => {
       formDataObj.append('paymentTerms', formData.paymentTerms);
       formDataObj.append('withXBowSupport', formData.withXBowSupport.toString());
 
-      // Prepare materials without files for JSON
       const materialsForJSON = materials.map(material => ({
         name: material.name,
         packType: material.packType,
@@ -373,16 +410,14 @@ export const PostLoadPage = () => {
         dimensions: material.dimensions,
         singleWeight: material.singleWeight,
         totalWeight: material.totalWeight,
-        photos: [] // Will be populated by backend after upload
+        photos: []
       }));
       
       formDataObj.append('materials', JSON.stringify(materialsForJSON));
 
-      // Append all material photos with descriptive field names
       materials.forEach((material, materialIndex) => {
         material.photos.forEach((photo) => {
           if (photo.file) {
-            // Use field name that indicates material index and photo type
             formDataObj.append('images', photo.file);
             formDataObj.append('photoTypes', `${materialIndex}-${photo.type}`);
           }
@@ -455,6 +490,8 @@ export const PostLoadPage = () => {
     );
   }
 
+  const availableVehicleSizes = getAvailableVehicleSizes(formData.vehicleRequirement.vehicleType);
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-blue-50 py-8">
       <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -483,7 +520,6 @@ export const PostLoadPage = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {/* Loading Location */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-medium text-slate-900">Loading Location</h4>
@@ -531,7 +567,6 @@ export const PostLoadPage = () => {
                 </div>
               </div>
 
-              {/* Unloading Location */}
               <div>
                 <div className="flex items-center justify-between mb-4">
                   <h4 className="font-medium text-slate-900">Unloading Location</h4>
@@ -609,17 +644,14 @@ export const PostLoadPage = () => {
               <h3 className="text-2xl font-bold text-slate-900">Vehicle Requirements</h3>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <div>
                 <label className="block text-sm font-semibold text-slate-700 mb-3">
                   Vehicle Type *
                 </label>
                 <select
                   value={formData.vehicleRequirement.vehicleType}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    vehicleRequirement: { ...prev.vehicleRequirement, vehicleType: e.target.value }
-                  }))}
+                  onChange={(e) => handleVehicleTypeChange(e.target.value)}
                   className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                   required
                 >
@@ -637,51 +669,40 @@ export const PostLoadPage = () => {
                 </select>
               </div>
 
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  Vehicle Length Size (ft) *
-                </label>
-                <select
-                  value={formData.vehicleRequirement.size}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    vehicleRequirement: { ...prev.vehicleRequirement, size: Number(e.target.value) }
-                  }))}
-                  className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                  required
-                >
-                  {[20,40,50,60,70,110].map(size => (
-                    <option key={size} value={size}>{size} ft</option>
-                  ))}
-                </select>
-              </div>
-                  </div>
-               <div className="grid grid-cols-1 gap-6">
-              <div>
-                <label className="block text-sm font-semibold text-slate-700 mb-3">
-                  Trailer Type
-                </label>
-                <select
-                  value={formData.vehicleRequirement.trailerType}
-                  onChange={(e) => setFormData(prev => ({
-                    ...prev,
-                    vehicleRequirement: { ...prev.vehicleRequirement, trailerType: e.target.value }
-                  }))}
-                  className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200"
-                >
-                  <option value="none">None</option>
-                  <option value="lowbed">Lowbed</option>
-                  <option value="semi-lowbed">Semi-Lowbed</option>
-                  <option value="high-bed">High Bed Trailer</option>
-                  <option value="hydraulic-axle-8">Hydraulic Axle (8 Axle)</option>
-                  <option value="flatbed">flat bed 20 feet</option>
-                  <option value="crane-14t">Crane (14T)</option>
-                  <option value="crane-25t">Crane (25T)</option>
-                  <option value="crane-50t">Crane (50T)</option>
-                  <option value="crane-100t">Crane (100T)</option>
-                  <option value="crane-200t">Crane (200T)</option>
-                </select>
-              </div>
+              {!isVehicleSizeDisabled() && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Vehicle Length Size (ft) *
+                  </label>
+                  <select
+                    value={formData.vehicleRequirement.size}
+                    onChange={(e) => setFormData(prev => ({
+                      ...prev,
+                      vehicleRequirement: { ...prev.vehicleRequirement, size: Number(e.target.value) }
+                    }))}
+                    className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200"
+                    required
+                  >
+                    {availableVehicleSizes.map(size => (
+                      <option key={size} value={size}>{size} ft</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {isVehicleSizeDisabled() && (
+                <div>
+                  <label className="block text-sm font-semibold text-slate-700 mb-3">
+                    Vehicle Length Size (ft)
+                  </label>
+                  <input
+                    type="text"
+                    value="Not Required"
+                    disabled
+                    className="w-full px-4 py-4 border-2 border-slate-200 rounded-xl bg-slate-100 text-slate-500 cursor-not-allowed"
+                  />
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -902,7 +923,6 @@ export const PostLoadPage = () => {
                 type="date"
                 value={formData.loadingDate}
                 onChange={(value) => setFormData(prev => ({ ...prev, loadingDate: value }))}
-                
                 required
               />
 
@@ -924,7 +944,7 @@ export const PostLoadPage = () => {
                   className="w-full px-4 py-4 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all duration-200"
                   required
                 >
-                  <option value="advance">Advance payment after loading completed</option>
+                  <option value="advance">Advance payment after loading completed</option>
                   <option value="cod">COD</option>
                   <option value="after_pod">After POD</option>
                   <option value="to_pay">To Pay</option>
@@ -942,7 +962,7 @@ export const PostLoadPage = () => {
                   className="w-5 h-5 text-blue-600 border-2 border-slate-300 rounded focus:ring-blue-500"
                 />
                 <span className="text-sm font-medium text-slate-700">
-                  With Xbow Logistics Pvt Ltd (5% commission applies)
+                  With Xbow Logistics Pvt Ltd (5% commission applies)
                 </span>
               </label>
               <p className="text-xs text-slate-500 mt-2 ml-8">
@@ -969,7 +989,6 @@ export const PostLoadPage = () => {
           </motion.div>
         </form>
 
-        {/* Map Location Selector Modal */}
         <MapLocationSelector
           isOpen={mapSelector.isOpen}
           onClose={closeMapSelector}
@@ -982,7 +1001,6 @@ export const PostLoadPage = () => {
           }
         />
 
-        {/* Vehicle Matching Modal */}
         <VehicleMatchingModal
           isOpen={showVehicleMatching}
           onClose={() => setShowVehicleMatching(false)}
