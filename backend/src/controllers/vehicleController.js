@@ -491,10 +491,14 @@ export const respondToApplication = async (req, res) => {
         assignedVehicleId: application.vehicleId._id
       });
 
+      await Vehicle.findByIdAndUpdate(application.vehicleId._id, { $inc: { loadsCompleted: 1 } });
+
       // Update vehicle status
       await Vehicle.findByIdAndUpdate(application.vehicleId._id, {
         status: 'assigned'
       });
+
+      await Vehicle.findByIdAndUpdate(application.vehicleId._id, { $inc: { loadsCompleted: 1 } });
 
       // Reject other pending applications for this load
       await VehicleApplication.updateMany(
@@ -1065,6 +1069,7 @@ export const respondToVehicleRequest = async (req, res) => {
       await Vehicle.findByIdAndUpdate(request.vehicleId._id, {
         status: 'assigned'
       });
+      await Vehicle.findByIdAndUpdate(request.vehicleId._id, { $inc: { loadsCompleted: 1 } });
 
       // Reject other pending requests for this load
       await VehicleRequest.updateMany(
@@ -1281,6 +1286,39 @@ export const updateVehicle = async (req, res) => {
       success: true,
       message: 'Vehicle updated successfully',
       data: updatedVehicle
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+//update vehicle availability date
+export const updateVehicleAvailability = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { availability } = req.body;
+    const vehicle = await Vehicle.findById(id);
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
+    }
+    if (vehicle.ownerId.toString() !== req.user._id.toString()) {
+      return res.status(403).json({
+        success: false,
+        message: 'Not authorized to update this vehicle'
+      });
+    }
+    vehicle.availability = availability;
+    await vehicle.save();
+    res.status(200).json({
+      success: true,
+      message: 'Vehicle availability updated successfully',
+      data: vehicle
     });
   } catch (error) {
     res.status(400).json({

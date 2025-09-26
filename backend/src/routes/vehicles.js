@@ -22,7 +22,8 @@ import {
   respondToVehicleRequest,
   getMatchingVehiclesForLoad,
   updateLoadStatus,
-  getVehicleOwnerProfile
+  getVehicleOwnerProfile,
+  updateVehicleAvailability
 
 } from '../controllers/vehicleController.js';
 import { protect, authorize } from '../middleware/auth.js';
@@ -40,6 +41,7 @@ router.get('/:id', protect, getVehicle);
 router.post('/:id/photos', protect, authorize('vehicle_owner'), uploadVehiclePhotos);
 router.put('/:id/status', protect, authorize('vehicle_owner'), updateVehicleStatus);
 router.get('/owner/:ownerId/profile',protect, getVehicleOwnerProfile);
+router.put('/availability/:id', protect, authorize('vehicle_owner'), updateVehicleAvailability);
 
 // Vehicle matching routes
 router.get('/load/:loadId/vehicles', getMatchingVehicles);

@@ -139,6 +139,9 @@ export const vehicleAPI = {
     api.post(`/vehicles/${vehicleId}/photos`, { photos }),
   updateVehicleStatus: (vehicleId: string, status: string) =>
     api.put(`${API_BASE_URL}/vehicles/${vehicleId}/status`, { status }),
+  updateVehicleAvailability: (vehicleId: string, data: any) =>
+    api.put(`${API_BASE_URL}/vehicles/availability/${vehicleId}`, data),
+  
 };
 
 export const paymentAPI = {
