@@ -255,6 +255,19 @@ export const VehicleMatchingModal: React.FC<VehicleMatchingModalProps> = ({
                                                                 <span className="text-slate-600">Body:</span>
                                                                 <p className="font-medium text-slate-900 capitalize">{application.vehicle.trailerType}</p>
                                                             </div>
+                                                            <div>
+                                                                <span className="text-slate-600">Rating:</span>
+                                                                <div className="flex items-center">
+                                                                    {Array.from({ length: 5 }).map((_, i) => (
+                                                                        i < Math.round(application.vehicle.rating) ? (
+                                                                            <StarSolidIcon key={i} className="h-4 w-4 text-yellow-400" />
+                                                                        ) : (
+                                                                            <StarIcon key={i} className="h-4 w-4 text-slate-300" />
+                                                                        )
+                                                                    ))}
+                                                                    <span className="ml-2 text-slate-600">({application.vehicle.rating.toFixed(1)})</span>
+                                                                </div>
+                                                            </div>
                                                         </div>
                                                     </div>
 
@@ -272,18 +285,24 @@ export const VehicleMatchingModal: React.FC<VehicleMatchingModalProps> = ({
                                                     <div className="mb-4">
                                                         <h5 className="text-sm font-medium text-slate-700 mb-2">Operating Areas</h5>
                                                         <div className="flex flex-wrap gap-1">
-                                                            {application.vehicle.preferredOperatingArea ? (
-                                                                <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">
-                                                                    {application.vehicle.preferredOperatingArea.place || "N/A"},{" "}
-                                                                    {application.vehicle.preferredOperatingArea.state || "N/A"}
-                                                                </span>
+                                                            {application.vehicle.operatingAreas && application.vehicle.operatingAreas.length > 0 ? (
+                                                                <>
+                                                                    {application.vehicle.operatingAreas.slice(0, 2).map((area, idx) => (
+                                                                        <span key={idx} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">
+                                                                            {area.place || "N/A"}, {area.state || "N/A"}
+                                                                        </span>
+                                                                    ))}
+                                                                    {application.vehicle.operatingAreas.length > 2 && (
+                                                                        <span className="text-xs text-slate-500">
+                                                                            +{application.vehicle.operatingAreas.length - 2} more
+                                                                        </span>
+                                                                    )}
+                                                                </>
                                                             ) : (
-                                                                <span className="text-xs text-slate-500 italic">No operating area specified</span>
+                                                                <span className="text-xs text-slate-500 italic">No operating areas specified</span>
                                                             )}
                                                         </div>
                                                     </div>
-
-
 
                                                     {/* Application Message */}
                                                     {application.message && (

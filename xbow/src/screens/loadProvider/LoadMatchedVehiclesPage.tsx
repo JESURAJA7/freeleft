@@ -77,9 +77,13 @@ export const LoadMatchedVehiclesPage: React.FC = () => {
 
         // Weight capacity (25 points)
         if (vehicle.passingLimit >= totalWeight / 1000) score += 25;
+        // Availability date (20 points)
+        if (new Date(vehicle.availability) <= new Date(load.loadingDate)) score += 20;
+
+        
 
         // Trailer type match (20 points)
-        if (vehicle.trailerType === load.vehicleRequirement.trailerType) score += 20;
+        // if (vehicle.trailerType === load.vehicleRequirement.trailerType) score += 20;
 
         return Math.min(score, 100);
     };

@@ -224,7 +224,7 @@ export const AddVehiclePage: React.FC = () => {
 
   const validateForm = (): boolean => {
     // Check required photos - adjust based on vehicle type
-    const requiredPhotoTypes = ['front', 'side', 'back', 'rc_book'];
+    const requiredPhotoTypes = ['front', 'side', 'back', 'rc_book_front', 'rc_book_back', 'driver_aadhar_front', 'driver_aadhar_back'];
     const uploadedRequiredPhotos = photos.filter(photo =>
       requiredPhotoTypes.includes(photo.type) && photo.file
     );

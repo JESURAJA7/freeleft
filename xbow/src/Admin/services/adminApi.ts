@@ -62,6 +62,8 @@ export const adminAPI = {
   approveUser: (userId: string, data: any) => adminApi.put(`${API_BASE_URL}/admin/users/${userId}/approve`, data),
   rejectUser: (userId: string, data: any) => adminApi.put(`${API_BASE_URL}/admin/users/${userId}/reject`, data),
   toggleUserAccess: (userId: string) => adminApi.put(`${API_BASE_URL}/admin/users/${userId}/toggle-access`),
+   updateUserLimits: (userId: string, data: { maxLoadsAllowed?: number; trialDays?: number }) =>
+    adminApi.patch(`${API_BASE_URL}/admin/users/${userId}/limits`, data),
 
   // Load Management
   getLoads: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/loads`, { params }),
@@ -71,6 +73,8 @@ export const adminAPI = {
   getVehicles: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/vehicles`, { params }),
   approveVehicle: (vehicleId: string) => adminApi.put(`${API_BASE_URL}/admin/vehicles/${vehicleId}/approve`),
   rejectVehicle: (vehicleId: string, data: any) => adminApi.put(`${API_BASE_URL}/admin/vehicles/${vehicleId}/reject`, data),
+   updateVehicleLimits: (vehicleId: string, data: { maxLoadsAllowed: number }) =>
+   adminApi.patch(`${API_BASE_URL}/admin/vehicles/${vehicleId}/limits`, data),
 
   // POD Management
   getPODs: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/pods`, { params }),

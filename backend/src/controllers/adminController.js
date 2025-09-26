@@ -1072,6 +1072,76 @@ export const changePassword = async (req, res) => {
   }
 };
 
+
+export const updateUserLimits = async (req, res) => {
+  try {
+    const { userId } = req.params;
+    const { maxLoadsAllowed, trialDays } = req.body;
+
+    const updateData = {};
+    if (maxLoadsAllowed !== undefined) updateData.maxLoadsAllowed = maxLoadsAllowed;
+    if (trialDays !== undefined) {
+      updateData.trialDays = trialDays;
+      const trialEndDate = new Date();
+      trialEndDate.setDate(trialEndDate.getDate() + trialDays);
+      updateData.trialEndDate = trialEndDate;
+    }
+
+    const user = await User.findByIdAndUpdate(userId, updateData, { new: true });
+
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'User not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'User limits updated successfully',
+      data: user
+    });
+  } catch (error) {
+    console.error('Error updating user limits:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update user limits'
+    });
+  }
+};
+
+export const updateVehicleLimits = async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    const { maxLoadsAllowed } = req.body;
+
+    const vehicle = await Vehicle.findByIdAndUpdate(
+      vehicleId,
+      { maxLoadsAllowed },
+      { new: true }
+    );
+
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
+    }
+
+    res.json({
+      success: true,
+      message: 'Vehicle limits updated successfully',
+      data: vehicle
+    });
+  } catch (error) {
+    console.error('Error updating vehicle limits:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to update vehicle limits'
+    });
+  }
+};
+
 export default {
   getDashboardStats,
   getUsers,

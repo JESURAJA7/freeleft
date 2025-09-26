@@ -22,7 +22,9 @@ import {
   loginAdmin,
   getAdminProfile,
   updateAdminProfile,
-  changePassword
+  changePassword,
+  updateUserLimits,
+  updateVehicleLimits
 } from "../controllers/adminController.js";
 import { protect, authorize } from "../middleware/auth.js";
 
@@ -47,6 +49,7 @@ router.get("/users", getUsers);
 router.put("/users/:id/approve", approveUser);
 router.put("/users/:id/reject", rejectUser);
 router.put("/users/:id/toggle-access", toggleUserAccess);
+router.patch('/users/:userId/limits', updateUserLimits);
 
 // Load management
 router.get("/loads", getLoads);
@@ -56,7 +59,7 @@ router.post("/match-loads", matchLoadsWithVehicles);
 router.get("/vehicles", getVehicles);
 router.put("/vehicles/:id/approve", approveVehicle);
 router.put("/vehicles/:id/reject", rejectVehicle);
-
+router.patch('/vehicles/:vehicleId/limits', updateVehicleLimits);
 // POD management
 router.get("/pods", getPODs);
 router.put("/pods/:id/approve", approvePOD);

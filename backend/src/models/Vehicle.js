@@ -12,12 +12,11 @@ const vehicleSchema = new mongoose.Schema({
   },
   vehicleType: {
     type: String,
-    enum: ['2-wheel', '3-wheel', '4-wheel', '6-wheel', '8-wheel', '10-wheel', '12-wheel', '14-wheel', '16-wheel', '18-wheel', '20-wheel'],
+    enum: ['2-wheel', '3-wheel', '4-wheel', '6-wheel', '8-wheel', '10-wheel', '12-wheel', '14-wheel', '16-wheel', '18-wheel', '20-wheel','trailer'],
     required: true
   },
   vehicleSize: {
     type: Number,
-    
     required: true
   },
  
@@ -86,7 +85,26 @@ operatingAreas: [
   isApproved: {
     type: Boolean,
     default: false
+  },
+  maxLoadsAllowed: {
+    type: Number,
+    default: 10
+  },
+  loadsCompleted: {
+    type: Number,
+    default: 0
+  },
+  approvedAt: {
+    type: Date
+  },
+  rejectedAt: {
+    type: Date
+  },
+  rejectionReason: {
+    type: String
   }
+
+
 }, {
   timestamps: true
 });

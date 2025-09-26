@@ -8,8 +8,8 @@ import upload from '../middleware/multer.js';
 // @route   POST /api/loads
 // @access  Private (Load Provider only)
 export const createLoad = async (req, res) => {
-  console.log('Create load request body:', req.body);
-  console.log('Create load request files:', req.files);
+  // console.log('Create load request body:', req.body);
+  // console.log('Create load request files:', req.files);
   
   try {
     const {
@@ -100,6 +100,7 @@ export const createLoad = async (req, res) => {
 
     // Increment user load count
     await User.findByIdAndUpdate(req.user._id, { $inc: { totalLoads: 1 } });
+    await User.findByIdAndUpdate(req.user._id, { $inc: { loadsPosted: 1 } });
 
     res.status(201).json({
       success: true,

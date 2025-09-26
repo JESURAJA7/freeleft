@@ -70,6 +70,7 @@ export interface User {
   subscriptionEndDate?: string;
   trialDays?: number;
   companyName?: string;
+
   totalLoadsPosted?: number;
   totalVehicles?: number;
   preferredOperatingState?: string;
@@ -173,7 +174,7 @@ export interface Vehicle {
     width: number;
     height: number;
   };
-  preferredOperatingArea: {
+  operatingAreas: {  // Change from preferredOperatingArea to operatingAreas
     place: string;
     state: string;
     district: string;
@@ -181,12 +182,11 @@ export interface Vehicle {
       latitude: number;
       longitude: number;
     };
-  };
+  }[];
   availability: string;
   rating: number;
   totalTrips: number;
   photos: Array<{
-    
     type: string;
     url: string;
     publicId: string;
@@ -205,6 +205,8 @@ export interface Vehicle {
   isApproved: boolean;
   isOpen: boolean;
   trailerType: string;
+  maxLoadsAllowed?: number;
+  loadsCompleted?: number;
   tarpaulin: boolean;
   createdAt: string;
   updatedAt: string;

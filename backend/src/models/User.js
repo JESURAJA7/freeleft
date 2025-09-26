@@ -46,6 +46,22 @@ const userSchema = new mongoose.Schema({
     landmark: String
   },
 
+   trialDays: {
+    type: Number,
+    default: 15
+  },
+  trialEndDate: {
+    type: Date
+  },
+  maxLoadsAllowed: {
+    type: Number,
+    default: 5
+  },
+  loadsPosted: {
+    type: Number,
+    default: 0
+  },
+
   // owner/driver details
   ownerType: { type: String, enum: ['owner','owner_with_driver'] },
   licenseNumber: String,

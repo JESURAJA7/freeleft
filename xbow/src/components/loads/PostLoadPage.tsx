@@ -181,7 +181,62 @@ export const PostLoadPage = () => {
     }
   };
 
-  const handlePhotoUpload = (materialIndex: number, photoType: string, file: File) => {
+  // Add this utility function
+const compressImage = (file: File, maxSizeKB = 500): Promise<File> => {
+  return new Promise((resolve) => {
+    if (file.size <= maxSizeKB * 1024) {
+      resolve(file);
+      return;
+    }
+
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      const MAX_WIDTH = 1024;
+      const MAX_HEIGHT = 1024;
+      let width = img.width;
+      let height = img.height;
+
+      if (width > height) {
+        if (width > MAX_WIDTH) {
+          height *= MAX_WIDTH / width;
+          width = MAX_WIDTH;
+        }
+      } else {
+        if (height > MAX_HEIGHT) {
+          width *= MAX_HEIGHT / height;
+          height = MAX_HEIGHT;
+        }
+      }
+
+      canvas.width = width;
+      canvas.height = height;
+      ctx?.drawImage(img, 0, 0, width, height);
+
+      canvas.toBlob((blob) => {
+        if (blob) {
+          const compressedFile = new File([blob], file.name, {
+            type: 'image/jpeg',
+            lastModified: Date.now(),
+          });
+          resolve(compressedFile);
+        } else {
+          resolve(file);
+        }
+      }, 'image/jpeg', 0.7);
+    };
+
+    img.src = URL.createObjectURL(file);
+  });
+};
+
+// Update your handlePhotoUpload function
+const handlePhotoUpload = async (materialIndex: number, photoType: string, file: File) => {
+  try {
+    const compressedFile = await compressImage(file);
+    
     const updatedMaterials = [...materials];
     const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
 
@@ -192,14 +247,28 @@ export const PostLoadPage = () => {
 
       updatedMaterials[materialIndex].photos[photoIndex] = {
         type: photoType,
-        file,
-        preview: URL.createObjectURL(file)
+        file: compressedFile,
+        preview: URL.createObjectURL(compressedFile)
       };
     }
 
     setMaterials(updatedMaterials);
-  };
+  } catch (error) {
+    console.error('Error compressing image:', error);
+    // Fallback to original file
+    const updatedMaterials = [...materials];
+    const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
 
+    if (photoIndex !== -1) {
+      updatedMaterials[materialIndex].photos[photoIndex] = {
+        type: photoType,
+        file,
+        preview: URL.createObjectURL(file)
+      };
+    }
+    setMaterials(updatedMaterials);
+  }
+};
   const handleRemovePhoto = (materialIndex: number, photoType: string) => {
     const updatedMaterials = [...materials];
     const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
@@ -432,6 +501,8 @@ export const PostLoadPage = () => {
 
       if (response.data.success) {
         toast.success('Load created successfully!');
+        // redirect to my load
+        navigate('/my-loads');
         const savedLoad: Load = response.data.data;
         setCurrentLoad(savedLoad);
         setShowVehicleMatching(true);
@@ -1001,12 +1072,12 @@ export const PostLoadPage = () => {
           }
         />
 
-        <VehicleMatchingModal
+        {/* <VehicleMatchingModal
           isOpen={showVehicleMatching}
           onClose={() => setShowVehicleMatching(false)}
           load={currentLoad}
           onVehicleSelect={handleVehicleSelect}
-        />
+        /> */}
       </div>
     </div>
   );

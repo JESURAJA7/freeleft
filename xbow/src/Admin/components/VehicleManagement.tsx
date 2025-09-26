@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { 
+import {
   MagnifyingGlassIcon,
   TruckIcon,
   CheckCircleIcon,
@@ -8,44 +8,18 @@ import {
   EyeIcon,
   PhotoIcon,
   DocumentTextIcon,
-  MapPinIcon
+  MapPinIcon,
+  CogIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon
 } from '@heroicons/react/24/outline';
 import { Button } from '../../components/common/CustomButton';
 import { Input } from '../../components/common/CustomInput';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { Modal, ImageGalleryModal, ConfirmationModal } from '../../components/common/Modal';
+import { Modal } from '../../components/common/Modal';
 import { adminAPI } from '../services/adminApi';
 import toast from 'react-hot-toast';
-import type{ Vehicle } from '../../types';
-
-// interface Vehicle {
-//   _id: string;
-//   ownerId: any;
-//   ownerName: string;
-//   vehicleType: string;
-//   vehicleSize: number;
-//   vehicleWeight: number;
-//   dimensions: { length: number; breadth: number };
-//   vehicleNumber: string;
-//   passingLimit: number;
-//   availability: string;
-//   isOpen: boolean;
-//   tarpaulin: string;
-//   trailerType: string;
-//   operatingAreas: Array<{
-//     state: string;
-//     district: string;
-//     place: string;
-//   }>;
-//   photos: Array<{
-//     type: string;
-//     url: string;
-//     publicId: string;
-//   }>;
-//   status: string;
-//   isApproved: boolean;
-//   createdAt: string;
-// }
+import type { Vehicle } from '../../types';
 
 export const VehicleManagement: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -53,8 +27,7 @@ export const VehicleManagement: React.FC = () => {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{ type: string; vehicleId: string } | null>(null);
+  const [isLimitsModalOpen, setIsLimitsModalOpen] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
@@ -64,6 +37,14 @@ export const VehicleManagement: React.FC = () => {
     status: 'all',
     approval: 'all',
     vehicleType: 'all'
+  });
+
+  const [approvalSettings, setApprovalSettings] = useState({
+    maxLoadsAllowed: 10
+  });
+
+  const [limitsForm, setLimitsForm] = useState({
+    maxLoadsAllowed: 10
   });
 
   useEffect(() => {
@@ -76,6 +57,7 @@ export const VehicleManagement: React.FC = () => {
 
   const fetchVehicles = async () => {
     try {
+      setLoading(true);
       const response = await adminAPI.getVehicles();
       if (response.data.success) {
         setVehicles(response.data.data);
@@ -91,28 +73,27 @@ export const VehicleManagement: React.FC = () => {
   const filterVehicles = () => {
     let filtered = [...vehicles];
 
-    // Search filter
     if (filters.search) {
       filtered = filtered.filter(vehicle =>
         vehicle.ownerName.toLowerCase().includes(filters.search.toLowerCase()) ||
         vehicle.vehicleNumber.toLowerCase().includes(filters.search.toLowerCase()) ||
-        vehicle.preferredOperatingArea.place.toLowerCase().includes(filters.search.toLowerCase())
+        (Array.isArray(vehicle.operatingAreas) &&
+          vehicle.operatingAreas.some(area =>
+            area.place.toLowerCase().includes(filters.search.toLowerCase())
+          ))
       );
     }
 
-    // Status filter
     if (filters.status !== 'all') {
       filtered = filtered.filter(vehicle => vehicle.status === filters.status);
     }
 
-    // Approval filter
     if (filters.approval !== 'all') {
-      filtered = filtered.filter(vehicle => 
+      filtered = filtered.filter(vehicle =>
         filters.approval === 'approved' ? vehicle.isApproved : !vehicle.isApproved
       );
     }
 
-    // Vehicle type filter
     if (filters.vehicleType !== 'all') {
       filtered = filtered.filter(vehicle => vehicle.vehicleType === filters.vehicleType);
     }
@@ -125,7 +106,7 @@ export const VehicleManagement: React.FC = () => {
     try {
       const response = await adminAPI.approveVehicle(vehicleId);
       if (response.data.success) {
-        toast.success('Vehicle approved successfully');
+        toast.success(`Vehicle approved with ${approvalSettings.maxLoadsAllowed} load limit`);
         fetchVehicles();
       }
     } catch (error) {
@@ -150,6 +131,22 @@ export const VehicleManagement: React.FC = () => {
     }
   };
 
+  const handleUpdateVehicleLimits = async () => {
+    if (!selectedVehicle) return;
+
+    try {
+      setActionLoading(selectedVehicle._id);
+      await adminAPI.updateVehicleLimits(selectedVehicle._id, limitsForm);
+      toast.success('Vehicle limits updated successfully');
+      setIsLimitsModalOpen(false);
+      fetchVehicles();
+    } catch (error) {
+      toast.error('Failed to update vehicle limits');
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const openImageGallery = (vehicle: Vehicle, startIndex: number = 0) => {
     setSelectedVehicle(vehicle);
     setCurrentImageIndex(startIndex);
@@ -158,35 +155,13 @@ export const VehicleManagement: React.FC = () => {
 
   const navigateImage = (direction: 'prev' | 'next') => {
     if (!selectedVehicle) return;
-    
+
     const totalImages = selectedVehicle.photos.length;
     if (direction === 'prev') {
       setCurrentImageIndex(prev => prev > 0 ? prev - 1 : totalImages - 1);
     } else {
       setCurrentImageIndex(prev => prev < totalImages - 1 ? prev + 1 : 0);
     }
-  };
-
-  const openConfirmModal = (type: string, vehicleId: string) => {
-    setConfirmAction({ type, vehicleId });
-    setIsConfirmModalOpen(true);
-  };
-
-  const handleConfirmAction = () => {
-    if (!confirmAction) return;
-
-    const { type, vehicleId } = confirmAction;
-    
-    switch (type) {
-      case 'approve':
-        handleApproveVehicle(vehicleId);
-        break;
-      case 'reject':
-        handleRejectVehicle(vehicleId);
-        break;
-    }
-    
-    setConfirmAction(null);
   };
 
   const getStatusColor = (status: string) => {
@@ -216,14 +191,40 @@ export const VehicleManagement: React.FC = () => {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-slate-900 mb-2">Vehicle Management</h1>
-          <p className="text-slate-600">Review and approve vehicle registrations</p>
+          <p className="text-slate-600">Review vehicles, approve registrations, and set load limits</p>
+        </motion.div>
+
+        {/* Approval Settings */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8"
+        >
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Default Vehicle Approval Settings</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Max Loads Allowed per Vehicle
+              </label>
+              <input
+                type="number"
+                value={approvalSettings.maxLoadsAllowed}
+                onChange={(e) => setApprovalSettings(prev => ({ ...prev, maxLoadsAllowed: Number(e.target.value) }))}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none"
+                min="1"
+                max="50"
+              />
+              <p className="text-xs text-slate-500 mt-1">Applied to newly approved vehicles</p>
+            </div>
+          </div>
         </motion.div>
 
         {/* Stats Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
+          transition={{ delay: 0.2 }}
           className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
         >
           {[
@@ -238,7 +239,7 @@ export const VehicleManagement: React.FC = () => {
                 key={stat.label}
                 initial={{ opacity: 0, scale: 0.9 }}
                 animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.2 + index * 0.1 }}
+                transition={{ delay: 0.3 + index * 0.1 }}
                 className="bg-white rounded-2xl p-6 shadow-lg border border-slate-200"
               >
                 <div className="flex items-center justify-between">
@@ -259,7 +260,7 @@ export const VehicleManagement: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ delay: 0.4 }}
           className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8"
         >
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -315,7 +316,7 @@ export const VehicleManagement: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.4 }}
+          transition={{ delay: 0.5 }}
           className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
         >
           <AnimatePresence>
@@ -328,21 +329,35 @@ export const VehicleManagement: React.FC = () => {
                 transition={{ delay: index * 0.1 }}
                 className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300"
               >
-                {/* Vehicle Photo */}
+                {/* Vehicle Photo Carousel */}
                 <div className="h-48 bg-gradient-to-br from-slate-100 to-slate-200 relative overflow-hidden">
                   {vehicle.photos.length > 0 ? (
-                    <img
-                      src={vehicle.photos[0].url}
-                      alt={vehicle.vehicleNumber}
-                      className="w-full h-full object-cover cursor-pointer"
-                      onClick={() => openImageGallery(vehicle, 0)}
-                    />
+                    <div className="relative h-full">
+                      <img
+                        src={vehicle.photos[0].url}
+                        alt={vehicle.vehicleNumber}
+                        className="w-full h-full object-cover cursor-pointer"
+                        onClick={() => openImageGallery(vehicle, 0)}
+                      />
+
+                      {/* Image Navigation */}
+                      {vehicle.photos.length > 1 && (
+                        <div className="absolute inset-0 flex items-center justify-between p-2 opacity-0 hover:opacity-100 transition-opacity">
+                          <button className="bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70">
+                            <ChevronLeftIcon className="h-4 w-4" />
+                          </button>
+                          <button className="bg-black bg-opacity-50 text-white p-1 rounded-full hover:bg-opacity-70">
+                            <ChevronRightIcon className="h-4 w-4" />
+                          </button>
+                        </div>
+                      )}
+                    </div>
                   ) : (
                     <div className="flex items-center justify-center h-full">
                       <TruckIcon className="h-16 w-16 text-slate-400" />
                     </div>
                   )}
-                  
+
                   {/* Status Badge */}
                   <div className="absolute top-4 left-4">
                     <div className={`flex items-center space-x-2 px-3 py-1 rounded-full border backdrop-blur-sm ${getStatusColor(vehicle.status)}`}>
@@ -379,6 +394,24 @@ export const VehicleManagement: React.FC = () => {
                     <p className="text-slate-600">{vehicle.ownerName}</p>
                   </div>
 
+                  {/* Load Limits for Approved Vehicles */}
+                  {vehicle.isApproved && (
+                    <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center space-x-2">
+                          <DocumentTextIcon className="h-4 w-4 text-emerald-600" />
+                          <span className="text-sm font-medium text-emerald-800">Load Limit</span>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-bold text-emerald-600">
+                            {vehicle.loadsCompleted || 0} / {vehicle.maxLoadsAllowed || 0}
+                          </p>
+                          <p className="text-xs text-emerald-500">Completed / Allowed</p>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
                   {/* Specifications */}
                   <div className="grid grid-cols-2 gap-3 mb-4">
                     <div className="bg-slate-50 rounded-lg p-3">
@@ -399,37 +432,82 @@ export const VehicleManagement: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Operating Area */}
+                  {/* Operating Areas */}
                   <div className="mb-6">
                     <p className="text-slate-600 text-sm mb-2 flex items-center">
                       <MapPinIcon className="h-4 w-4 mr-1" />
-                      Operating Area
+                      Operating Areas
                     </p>
-                    <div className="bg-slate-50 rounded-lg p-3">
-                      {/* <p className="font-medium text-slate-900 text-sm">{vehicle.preferredOperatingArea.place}</p> */}
-                      {/* <p className="text-slate-600 text-xs">{vehicle.preferredOperatingArea.district}, {vehicle.preferredOperatingArea.state}</p> */}
+                    <div className="flex flex-wrap gap-1">
+                      {Array.isArray(vehicle.operatingAreas) && vehicle.operatingAreas.length > 0 ? (
+                        <>
+                          {vehicle.operatingAreas.slice(0, 2).map((area, idx) => (
+                            <span key={idx} className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-lg">
+                              {area.place}, {area.state}
+                            </span>
+                          ))}
+                          {vehicle.operatingAreas.length > 2 && (
+                            <span className="text-xs text-slate-500">
+                              +{vehicle.operatingAreas.length - 2} more
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-xs text-slate-500 italic">No operating areas specified</span>
+                      )}
                     </div>
                   </div>
 
                   {/* Actions */}
                   <div className="space-y-3">
-                    <Button
-                      onClick={() => {
-                        setSelectedVehicle(vehicle);
-                        setIsModalOpen(true);
-                      }}
-                      variant="outline"
-                      size="sm"
-                      className="w-full"
-                      icon={<EyeIcon className="h-4 w-4" />}
-                    >
-                      View Details
-                    </Button>
+                    <div className="flex space-x-2">
+                      <Button
+                        onClick={() => {
+                          setSelectedVehicle(vehicle);
+                          setIsModalOpen(true);
+                        }}
+                        variant="outline"
+                        size="sm"
+                        className="flex-1"
+                        icon={<EyeIcon className="h-4 w-4" />}
+                      >
+                        View Details
+                      </Button>
+
+                      {vehicle.photos.length > 0 && (
+                        <Button
+                          onClick={() => openImageGallery(vehicle)}
+                          variant="ghost"
+                          size="sm"
+                          icon={<PhotoIcon className="h-4 w-4" />}
+                        >
+                          Photos ({vehicle.photos.length})
+                        </Button>
+                      )}
+                    </div>
+
+                    {vehicle.isApproved && (
+                      <Button
+                        onClick={() => {
+                          setSelectedVehicle(vehicle);
+                          setLimitsForm({
+                            maxLoadsAllowed: vehicle.maxLoadsAllowed || 10
+                          });
+                          setIsLimitsModalOpen(true);
+                        }}
+                        variant="secondary"
+                        size="sm"
+                        className="w-full"
+                        icon={<CogIcon className="h-4 w-4" />}
+                      >
+                        Manage Load Limits
+                      </Button>
+                    )}
 
                     {!vehicle.isApproved && (
                       <div className="flex space-x-2">
                         <Button
-                          onClick={() => openConfirmModal('approve', vehicle._id)}
+                          onClick={() => handleApproveVehicle(vehicle._id)}
                           loading={actionLoading === vehicle._id}
                           variant="secondary"
                           size="sm"
@@ -439,28 +517,16 @@ export const VehicleManagement: React.FC = () => {
                           Approve
                         </Button>
                         <Button
-                          onClick={() => openConfirmModal('reject', vehicle._id)}
+                          onClick={() => handleRejectVehicle(vehicle._id)}
                           loading={actionLoading === vehicle._id}
-                          variant="danger"
+                          variant="outline"
                           size="sm"
-                          className="flex-1"
+                          className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                           icon={<XCircleIcon className="h-4 w-4" />}
                         >
                           Reject
                         </Button>
                       </div>
-                    )}
-
-                    {vehicle.photos.length > 0 && (
-                      <Button
-                        onClick={() => openImageGallery(vehicle)}
-                        variant="ghost"
-                        size="sm"
-                        className="w-full"
-                        icon={<PhotoIcon className="h-4 w-4" />}
-                      >
-                        View Photos ({vehicle.photos.length})
-                      </Button>
                     )}
                   </div>
                 </div>
@@ -476,18 +542,16 @@ export const VehicleManagement: React.FC = () => {
           title="Vehicle Details"
           size="xl"
         >
-          {selectedVehicle && (
+          {selectedVehicle ? (
             <div className="space-y-6">
               {/* Owner Information */}
-              {/* <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
+              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                 <h3 className="font-semibold text-blue-800 mb-2">Vehicle Owner</h3>
                 <div className="text-blue-700 text-sm space-y-1">
                   <p className="font-medium">{selectedVehicle.ownerName}</p>
-                  <p>Email: {selectedVehicle.ownerId}</p>
-                  <p>Phone: {selectedVehicle.ownerId.phone}</p>
-                  <p>WhatsApp: {selectedVehicle.ownerId.whatsappNumber}</p>
+                  <p>Vehicle Number: {selectedVehicle.vehicleNumber}</p>
                 </div>
-              </div> */}
+              </div>
 
               {/* Vehicle Specifications */}
               <div>
@@ -515,15 +579,15 @@ export const VehicleManagement: React.FC = () => {
                   </div>
                   <div className="bg-slate-50 rounded-xl p-4">
                     <p className="text-slate-600 text-sm mb-1">Dimensions</p>
-                    <p className="font-semibold text-slate-900">{selectedVehicle.dimensions.length} × {selectedVehicle.dimensions.height} ft</p>
+                    <p className="font-semibold text-slate-900">{selectedVehicle.dimensions?.length || 'N/A'} × {selectedVehicle.dimensions?.height || 'N/A'} ft</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-4">
                     <p className="text-slate-600 text-sm mb-1">Body Type</p>
-                    <p className="font-semibold text-slate-900">{selectedVehicle.isOpen ? 'Open' : 'Closed'}</p>
+                    <p className="font-semibold text-slate-900 capitalize">{selectedVehicle.vehicleType}</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-4">
                     <p className="text-slate-600 text-sm mb-1">Tarpaulin</p>
-                    <p className="font-semibold text-slate-900 capitalize">{selectedVehicle.tarpaulin}</p>
+                    <p className="font-semibold text-slate-900 capitalize">{selectedVehicle.tarpaulin || 'N/A'}</p>
                   </div>
                   <div className="bg-slate-50 rounded-xl p-4">
                     <p className="text-slate-600 text-sm mb-1">Trailer Type</p>
@@ -532,36 +596,69 @@ export const VehicleManagement: React.FC = () => {
                 </div>
               </div>
 
-              {/* Vehicle Photos */}
-              {selectedVehicle.photos.length > 0 && (
-                <div>
-                  <h3 className="font-semibold text-slate-900 mb-4">Vehicle Photos ({selectedVehicle.photos.length}/6)</h3>
-                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                    {selectedVehicle.photos.map((photo, index) => (
-                      <div key={index} className="relative group">
-                        <img
-                          src={photo.url}
-                          alt={photo.type}
-                          className="w-full h-24 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 transition-opacity cursor-pointer"
-                          onClick={() => openImageGallery(selectedVehicle, index)}
-                        />
-                        <div className="absolute bottom-1 left-1 right-1">
-                          <span className="text-xs bg-black bg-opacity-70 text-white px-1 py-0.5 rounded text-center block capitalize">
-                            {photo.type.replace('_', ' ')}
+              {/* Operating Areas */}
+
+              <div>
+                <h3 className="font-semibold text-slate-900 mb-4">Operating Areas</h3>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  {Array.isArray(selectedVehicle.operatingAreas) && selectedVehicle.operatingAreas.length > 0 ? (
+                    selectedVehicle.operatingAreas.map((area, idx) => (
+                      <div key={idx} className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                        <div className="flex items-center space-x-2">
+                          <MapPinIcon className="h-4 w-4 text-slate-500" />
+                          <span className="text-sm font-medium text-slate-900">
+                            {area.place}, {area.district}, {area.state}
                           </span>
                         </div>
+                        {area.coordinates && (
+                          <div className="text-xs text-slate-500 mt-2">
+                            Coordinates: {area.coordinates.latitude}, {area.coordinates.longitude}
+                          </div>
+                        )}
                       </div>
-                    ))}
-                  </div>
+                    ))
+                  ) : (
+                    <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
+                      <div className="text-sm text-slate-500 italic">No operating areas specified</div>
+                    </div>
+                  )}
                 </div>
-              )}
+              </div>
+             {/* Vehicle Photos Gallery */}
+{selectedVehicle.photos.length > 0 && (
+  <div>
+    <h3 className="font-semibold text-slate-900 mb-4">
+      Vehicle Photos ({selectedVehicle.photos.length}/6)
+    </h3>
+    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+      {selectedVehicle.photos.map((photo, index) => (
+        <div key={index} className="relative group">
+          <img
+            src={photo.url}
+            alt={photo.type || 'Vehicle photo'}
+            className="w-full h-24 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 transition-opacity cursor-pointer"
+            onClick={() => openImageGallery(selectedVehicle, index)}
+          />
+          <div className="absolute bottom-1 left-1 right-1">
+            <span className="text-xs bg-black bg-opacity-70 text-white px-1 py-0.5 rounded text-center block capitalize">
+              {photo.type ? photo.type.replace('_', ' ') : 'Photo'}
+            </span>
+          </div>
+          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
+            <EyeIcon className="text-white opacity-0 group-hover:opacity-100 transition-opacity h-5 w-5" />
+          </div>
+        </div>
+      ))}
+    </div>
+  </div>
+)}
 
               {/* Approval Actions */}
               {!selectedVehicle.isApproved && (
                 <div className="bg-orange-50 border border-orange-200 rounded-xl p-6">
                   <h3 className="font-semibold text-orange-800 mb-4">Vehicle Approval</h3>
                   <p className="text-orange-700 text-sm mb-4">
-                    Review all vehicle details and photos before approving. Ensure all documents are valid and vehicle information is accurate.
+                    Review all vehicle details and photos before approving. Vehicle will be assigned {approvalSettings.maxLoadsAllowed} load limit.
                   </p>
                   <div className="flex space-x-3">
                     <Button
@@ -582,8 +679,8 @@ export const VehicleManagement: React.FC = () => {
                         setIsModalOpen(false);
                       }}
                       loading={actionLoading === selectedVehicle._id}
-                      variant="danger"
-                      className="flex-1"
+                      variant="outline"
+                      className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                       icon={<XCircleIcon className="h-4 w-4" />}
                     >
                       Reject Vehicle
@@ -592,32 +689,167 @@ export const VehicleManagement: React.FC = () => {
                 </div>
               )}
             </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-slate-500">No vehicle data available</p>
+            </div>
           )}
         </Modal>
 
         {/* Image Gallery Modal */}
-        <ImageGalleryModal
+        <Modal
           isOpen={isImageModalOpen}
           onClose={() => setIsImageModalOpen(false)}
-          images={selectedVehicle?.photos || []}
-          currentIndex={currentImageIndex}
-          onNavigate={navigateImage}
-        />
+          title=""
+          size="xl"
+          fullScreen={true}
+        >
+          {selectedVehicle && selectedVehicle.photos.length > 0 && (
+            <div className="h-full flex flex-col bg-black">
+              {/* Header */}
+              <div className="bg-black text-white p-4 flex items-center justify-between">
+                <div>
+                  <h2 className="text-xl font-bold">{selectedVehicle.vehicleNumber}</h2>
+                  <p className="text-gray-300">
+                    Photo {currentImageIndex + 1} of {selectedVehicle.photos.length}
+                  </p>
+                </div>
+                <Button
+                  onClick={() => setIsImageModalOpen(false)}
+                  variant="ghost"
+                  className="text-white hover:bg-gray-800"
+                >
+                  <XCircleIcon className="h-6 w-6" />
+                </Button>
+              </div>
 
-        {/* Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleConfirmAction}
-          title={confirmAction?.type === 'approve' ? 'Approve Vehicle' : 'Reject Vehicle'}
-          message={
-            confirmAction?.type === 'approve' 
-              ? 'Are you sure you want to approve this vehicle? The owner will be notified.'
-              : 'Are you sure you want to reject this vehicle? The owner will be notified.'
-          }
-          confirmText={confirmAction?.type === 'approve' ? 'Approve' : 'Reject'}
-          type={confirmAction?.type === 'reject' ? 'danger' : 'info'}
-        />
+              {/* Image Display */}
+              <div className="flex-1 flex items-center justify-center relative">
+                <img
+                  src={selectedVehicle.photos[currentImageIndex].url}
+                  alt={selectedVehicle.photos[currentImageIndex].type}
+                  className="max-h-full max-w-full object-contain"
+                />
+
+                {/* Navigation Buttons */}
+                {selectedVehicle.photos.length > 1 && (
+                  <>
+                    <button
+                      onClick={() => navigateImage('prev')}
+                      className="absolute left-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 transition-all"
+                    >
+                      <ChevronLeftIcon className="h-6 w-6" />
+                    </button>
+                    <button
+                      onClick={() => navigateImage('next')}
+                      className="absolute right-4 top-1/2 transform -translate-y-1/2 bg-black bg-opacity-50 text-white p-3 rounded-full hover:bg-opacity-70 transition-all"
+                    >
+                      <ChevronRightIcon className="h-6 w-6" />
+                    </button>
+                  </>
+                )}
+              </div>
+
+              {/* Image Info */}
+              <div className="bg-black text-white p-4 border-t border-gray-800">
+                <div className="flex items-center justify-between">
+                  <div>
+                    {/* <p className="font-medium capitalize">
+                      {selectedVehicle.photos[currentImageIndex].type.replace('_', ' ')}
+                    </p> */}
+                  </div>
+                  <div className="flex space-x-2">
+                    {selectedVehicle.photos.map((_, index) => (
+                      <button
+                        key={index}
+                        onClick={() => setCurrentImageIndex(index)}
+                        className={`w-2 h-2 rounded-full transition-all ${index === currentImageIndex ? 'bg-white' : 'bg-gray-600'
+                          }`}
+                      />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Vehicle Limits Modal */}
+        <Modal
+          isOpen={isLimitsModalOpen}
+          onClose={() => setIsLimitsModalOpen(false)}
+          title="Manage Vehicle Load Limits"
+          size="md"
+        >
+          {selectedVehicle ? (
+            <div className="space-y-6">
+              {/* Vehicle Info */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <h3 className="font-semibold text-slate-900 mb-2">{selectedVehicle.vehicleNumber}</h3>
+                <p className="text-slate-600">{selectedVehicle.ownerName}</p>
+                <p className="text-sm text-slate-500 mt-1">
+                  {selectedVehicle.vehicleType} • {selectedVehicle.vehicleSize}ft
+                </p>
+              </div>
+
+              {/* Current Stats */}
+              <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4">
+                <h4 className="font-medium text-emerald-800 mb-3">Current Performance</h4>
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <span className="text-emerald-600">Loads Completed:</span>
+                    <p className="font-semibold text-emerald-800">{selectedVehicle.loadsCompleted || 0}</p>
+                  </div>
+                  <div>
+                    <span className="text-emerald-600">Current Limit:</span>
+                    <p className="font-semibold text-emerald-800">{selectedVehicle.maxLoadsAllowed || 0}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Limits Form */}
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Maximum Loads Allowed
+                </label>
+                <input
+                  type="number"
+                  value={limitsForm.maxLoadsAllowed}
+                  onChange={(e) => setLimitsForm(prev => ({ ...prev, maxLoadsAllowed: Number(e.target.value) }))}
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none"
+                  min="1"
+                  max="50"
+                />
+                <p className="text-xs text-slate-500 mt-1">
+                  Set how many loads this vehicle can handle
+                </p>
+              </div>
+
+              {/* Actions */}
+              <div className="flex space-x-4">
+                <Button
+                  onClick={() => setIsLimitsModalOpen(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateVehicleLimits}
+                  loading={actionLoading === selectedVehicle._id}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  icon={<CogIcon className="h-4 w-4" />}
+                >
+                  Update Limits
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <div className="text-center py-8">
+              <p className="text-slate-500">No vehicle selected</p>
+            </div>
+          )}
+        </Modal>
       </div>
     </div>
   );

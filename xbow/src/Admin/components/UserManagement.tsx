@@ -10,12 +10,16 @@ import {
   BuildingOfficeIcon,
   TruckIcon,
   ClockIcon,
-  ExclamationTriangleIcon
+  ExclamationTriangleIcon,
+  CalendarIcon,
+  CurrencyRupeeIcon,
+  DocumentTextIcon,
+  CogIcon
 } from '@heroicons/react/24/outline';
 import { Button } from '../../components/common/CustomButton';
 import { Input } from '../../components/common/CustomInput';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
-import { Modal, ConfirmationModal } from '../../components/common/Modal';
+import { Modal } from '../../components/common/Modal';
 import { adminAPI } from '../services/adminApi';
 import toast from 'react-hot-toast';
 
@@ -31,9 +35,10 @@ interface User {
   subscriptionStatus: 'active' | 'inactive' | 'trial' | 'expired';
   subscriptionEndDate?: string;
   trialDays?: number;
+  trialEndDate?: string;
+  maxLoadsAllowed?: number;
+  loadsPosted?: number;
   companyName?: string;
-  totalLoadsPosted?: number;
-  totalVehicles?: number;
   address?: any;
   businessDetails?: any;
   documents?: any[];
@@ -45,8 +50,7 @@ export const UserManagement: React.FC = () => {
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isConfirmModalOpen, setIsConfirmModalOpen] = useState(false);
-  const [confirmAction, setConfirmAction] = useState<{ type: string; userId: string } | null>(null);
+  const [isLimitsModalOpen, setIsLimitsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
@@ -57,7 +61,15 @@ export const UserManagement: React.FC = () => {
     approval: 'all'
   });
 
-  const [trialDays, setTrialDays] = useState(15);
+  const [approvalSettings, setApprovalSettings] = useState({
+    trialDays: 15,
+    maxLoadsAllowed: 5
+  });
+
+  const [limitsForm, setLimitsForm] = useState({
+    maxLoadsAllowed: 5,
+    trialDays: 15
+  });
 
   useEffect(() => {
     fetchUsers();
@@ -69,6 +81,7 @@ export const UserManagement: React.FC = () => {
 
   const fetchUsers = async () => {
     try {
+      setLoading(true);
       const response = await adminAPI.getUsers();
       if (response.data.success) {
         setUsers(response.data.data);
@@ -84,7 +97,6 @@ export const UserManagement: React.FC = () => {
   const filterUsers = () => {
     let filtered = [...users];
 
-    // Search filter
     if (filters.search) {
       filtered = filtered.filter(user =>
         user.name.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -94,17 +106,14 @@ export const UserManagement: React.FC = () => {
       );
     }
 
-    // Role filter
     if (filters.role !== 'all') {
       filtered = filtered.filter(user => user.role === filters.role);
     }
 
-    // Status filter
     if (filters.status !== 'all') {
       filtered = filtered.filter(user => user.subscriptionStatus === filters.status);
     }
 
-    // Approval filter
     if (filters.approval !== 'all') {
       filtered = filtered.filter(user => 
         filters.approval === 'approved' ? user.isApproved : !user.isApproved
@@ -117,9 +126,12 @@ export const UserManagement: React.FC = () => {
   const handleApproveUser = async (userId: string) => {
     setActionLoading(userId);
     try {
-      const response = await adminAPI.approveUser(userId, { trialDays });
+      const response = await adminAPI.approveUser(userId, {
+        trialDays: approvalSettings.trialDays,
+        maxLoadsAllowed: approvalSettings.maxLoadsAllowed
+      });
       if (response.data.success) {
-        toast.success('User approved successfully');
+        toast.success(`User approved with ${approvalSettings.trialDays} days trial`);
         fetchUsers();
       }
     } catch (error) {
@@ -129,10 +141,10 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleRejectUser = async (userId: string, reason: string) => {
+  const handleRejectUser = async (userId: string) => {
     setActionLoading(userId);
     try {
-      const response = await adminAPI.rejectUser(userId, { reason });
+      const response = await adminAPI.rejectUser(userId, { reason: 'Documents not verified' });
       if (response.data.success) {
         toast.success('User rejected successfully');
         fetchUsers();
@@ -144,44 +156,28 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const handleToggleAccess = async (userId: string) => {
-    setActionLoading(userId);
+  const handleUpdateLimits = async () => {
+    if (!selectedUser) return;
+    
     try {
-      const response = await adminAPI.toggleUserAccess(userId);
-      if (response.data.success) {
-        toast.success('User access updated successfully');
-        fetchUsers();
-      }
+      setActionLoading(selectedUser._id);
+      await adminAPI.updateUserLimits(selectedUser._id, limitsForm);
+      toast.success('User limits updated successfully');
+      setIsLimitsModalOpen(false);
+      fetchUsers();
     } catch (error) {
-      toast.error('Failed to update user access');
+      toast.error('Failed to update user limits');
     } finally {
       setActionLoading(null);
     }
   };
 
-  const openConfirmModal = (type: string, userId: string) => {
-    setConfirmAction({ type, userId });
-    setIsConfirmModalOpen(true);
-  };
-
-  const handleConfirmAction = () => {
-    if (!confirmAction) return;
-
-    const { type, userId } = confirmAction;
-    
-    switch (type) {
-      case 'approve':
-        handleApproveUser(userId);
-        break;
-      case 'reject':
-        handleRejectUser(userId, 'Documents not verified');
-        break;
-      case 'toggle':
-        handleToggleAccess(userId);
-        break;
-    }
-    
-    setConfirmAction(null);
+  const calculateRemainingDays = (trialEndDate: string) => {
+    const now = new Date();
+    const endDate = new Date(trialEndDate);
+    const diffTime = endDate.getTime() - now.getTime();
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+    return Math.max(0, diffDays);
   };
 
   const getStatusColor = (status: string) => {
@@ -215,17 +211,55 @@ export const UserManagement: React.FC = () => {
           className="mb-8"
         >
           <h1 className="text-3xl font-bold text-slate-900 mb-2">User Management</h1>
-          <p className="text-slate-600">Approve, reject, and manage user accounts</p>
+          <p className="text-slate-600">Approve users and manage trial periods & load limits</p>
         </motion.div>
 
-        {/* Filters */}
+        {/* Approval Settings */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.1 }}
           className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8"
         >
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <h2 className="text-lg font-semibold text-slate-900 mb-4">Default Approval Settings</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Trial Days for New Users
+              </label>
+              <input
+                type="number"
+                value={approvalSettings.trialDays}
+                onChange={(e) => setApprovalSettings(prev => ({ ...prev, trialDays: Number(e.target.value) }))}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none"
+                min="1"
+                max="90"
+              />
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-slate-700 mb-2">
+                Max Loads Allowed (Load Providers)
+              </label>
+              <input
+                type="number"
+                value={approvalSettings.maxLoadsAllowed}
+                onChange={(e) => setApprovalSettings(prev => ({ ...prev, maxLoadsAllowed: Number(e.target.value) }))}
+                className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none"
+                min="1"
+                max="100"
+              />
+            </div>
+          </div>
+        </motion.div>
+
+        {/* Filters */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.2 }}
+          className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8"
+        >
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
               <Input
@@ -267,18 +301,6 @@ export const UserManagement: React.FC = () => {
               <option value="approved">Approved</option>
               <option value="pending">Pending</option>
             </select>
-
-            <div>
-              <label className="block text-sm font-medium text-slate-700 mb-2">Trial Days</label>
-              <input
-                type="number"
-                value={trialDays}
-                onChange={(e) => setTrialDays(Number(e.target.value))}
-                className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-                min="1"
-                max="30"
-              />
-            </div>
           </div>
 
           <div className="mt-4 flex justify-between items-center">
@@ -299,12 +321,15 @@ export const UserManagement: React.FC = () => {
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
+          transition={{ delay: 0.3 }}
           className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
         >
           <AnimatePresence>
             {filteredUsers.map((user, index) => {
               const RoleIcon = getRoleIcon(user.role);
+              const remainingDays = user.trialEndDate ? calculateRemainingDays(user.trialEndDate) : 0;
+              const isTrialExpiring = remainingDays <= 3 && user.subscriptionStatus === 'trial';
+              
               return (
                 <motion.div
                   key={user._id}
@@ -312,7 +337,9 @@ export const UserManagement: React.FC = () => {
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ delay: index * 0.1 }}
-                  className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300"
+                  className={`bg-white rounded-2xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 ${
+                    isTrialExpiring ? 'border-red-300 ring-2 ring-red-100' : 'border-slate-200'
+                  }`}
                 >
                   <div className="p-6">
                     {/* Header */}
@@ -331,7 +358,7 @@ export const UserManagement: React.FC = () => {
                         </div>
                       </div>
                       
-                      <div className="flex space-x-2">
+                      <div className="flex flex-col space-y-2">
                         {!user.isActive && (
                           <div className="bg-red-100 text-red-700 px-2 py-1 rounded-full border border-red-200">
                             <span className="text-xs font-medium">Disabled</span>
@@ -348,6 +375,58 @@ export const UserManagement: React.FC = () => {
                         )}
                       </div>
                     </div>
+
+                    {/* Trial Status */}
+                    {user.subscriptionStatus === 'trial' && user.trialEndDate && (
+                      <div className={`p-3 rounded-xl border mb-4 ${
+                        isTrialExpiring 
+                          ? 'bg-red-50 border-red-200' 
+                          : 'bg-blue-50 border-blue-200'
+                      }`}>
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <CalendarIcon className={`h-4 w-4 ${
+                              isTrialExpiring ? 'text-red-600' : 'text-blue-600'
+                            }`} />
+                            <span className={`text-sm font-medium ${
+                              isTrialExpiring ? 'text-red-800' : 'text-blue-800'
+                            }`}>
+                              Trial Period
+                            </span>
+                          </div>
+                          <div className="text-right">
+                            <p className={`font-bold ${
+                              isTrialExpiring ? 'text-red-600' : 'text-blue-600'
+                            }`}>
+                              {remainingDays} days left
+                            </p>
+                            <p className={`text-xs ${
+                              isTrialExpiring ? 'text-red-500' : 'text-blue-500'
+                            }`}>
+                              Ends: {new Date(user.trialEndDate).toLocaleDateString()}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Load Limits for Load Providers */}
+                    {user.role === 'load_provider' && user.isApproved && (
+                      <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-3 mb-4">
+                        <div className="flex items-center justify-between">
+                          <div className="flex items-center space-x-2">
+                            <DocumentTextIcon className="h-4 w-4 text-emerald-600" />
+                            <span className="text-sm font-medium text-emerald-800">Load Limit</span>
+                          </div>
+                          <div className="text-right">
+                            <p className="font-bold text-emerald-600">
+                              {user.loadsPosted || 0} / {user.maxLoadsAllowed || 0}
+                            </p>
+                            <p className="text-xs text-emerald-500">Posted / Allowed</p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     {/* User Details */}
                     <div className="space-y-3 mb-6">
@@ -396,10 +475,29 @@ export const UserManagement: React.FC = () => {
                         View Details
                       </Button>
 
+                      {user.isApproved && (
+                        <Button
+                          onClick={() => {
+                            setSelectedUser(user);
+                            setLimitsForm({
+                              maxLoadsAllowed: user.maxLoadsAllowed || 5,
+                              trialDays: user.trialDays || 15
+                            });
+                            setIsLimitsModalOpen(true);
+                          }}
+                          variant="secondary"
+                          size="sm"
+                          className="w-full"
+                          icon={<CogIcon className="h-4 w-4" />}
+                        >
+                          Manage Limits
+                        </Button>
+                      )}
+
                       {!user.isApproved ? (
                         <div className="flex space-x-2">
                           <Button
-                            onClick={() => openConfirmModal('approve', user._id)}
+                            onClick={() => handleApproveUser(user._id)}
                             loading={actionLoading === user._id}
                             variant="secondary"
                             size="sm"
@@ -409,11 +507,11 @@ export const UserManagement: React.FC = () => {
                             Approve
                           </Button>
                           <Button
-                            onClick={() => openConfirmModal('reject', user._id)}
+                            onClick={() => handleRejectUser(user._id)}
                             loading={actionLoading === user._id}
-                            variant="danger"
+                            variant="outline"
                             size="sm"
-                            className="flex-1"
+                            className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                             icon={<XCircleIcon className="h-4 w-4" />}
                           >
                             Reject
@@ -421,9 +519,10 @@ export const UserManagement: React.FC = () => {
                         </div>
                       ) : (
                         <Button
-                          onClick={() => openConfirmModal('toggle', user._id)}
-                          loading={actionLoading === user._id}
-                          variant={user.isActive ? "danger" : "secondary"}
+                          onClick={() => {
+                            // Toggle user access
+                          }}
+                          variant={user.isActive ? "outline" : "secondary"}
                           size="sm"
                           className="w-full"
                         >
@@ -509,60 +608,21 @@ export const UserManagement: React.FC = () => {
                         <span className="text-xs font-medium capitalize">{selectedUser.subscriptionStatus}</span>
                       </div>
                     </div>
-                    {selectedUser.subscriptionEndDate && (
+                    {selectedUser.trialEndDate && (
                       <div className="flex justify-between">
-                        <span className="text-slate-600">Expires:</span>
-                        <span className="font-medium">{new Date(selectedUser.subscriptionEndDate).toLocaleDateString()}</span>
+                        <span className="text-slate-600">Trial Ends:</span>
+                        <span className="font-medium">{new Date(selectedUser.trialEndDate).toLocaleDateString()}</span>
+                      </div>
+                    )}
+                    {selectedUser.role === 'load_provider' && (
+                      <div className="flex justify-between">
+                        <span className="text-slate-600">Load Limit:</span>
+                        <span className="font-medium">{selectedUser.loadsPosted || 0} / {selectedUser.maxLoadsAllowed || 0}</span>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
-
-              {/* Address Information */}
-              {selectedUser.address && (
-                <div>
-                  <h3 className="font-semibold text-slate-900 mb-4">Address Information</h3>
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <p className="text-slate-900 font-medium">{selectedUser.address.street}</p>
-                    <p className="text-slate-600">{selectedUser.address.city}, {selectedUser.address.state} - {selectedUser.address.pincode}</p>
-                    {selectedUser.address.landmark && (
-                      <p className="text-slate-500 text-sm">Landmark: {selectedUser.address.landmark}</p>
-                    )}
-                  </div>
-                </div>
-              )}
-
-              {/* Business Details */}
-              {selectedUser.businessDetails && (
-                <div>
-                  <h3 className="font-semibold text-slate-900 mb-4">Business Details</h3>
-                  <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-slate-600">Company:</span>
-                        <p className="font-medium text-slate-900">{selectedUser.businessDetails.companyName}</p>
-                      </div>
-                      <div>
-                        <span className="text-slate-600">Business Type:</span>
-                        <p className="font-medium text-slate-900 capitalize">{selectedUser.businessDetails.businessType}</p>
-                      </div>
-                      {selectedUser.businessDetails.gstNumber && (
-                        <div>
-                          <span className="text-slate-600">GST Number:</span>
-                          <p className="font-medium text-slate-900">{selectedUser.businessDetails.gstNumber}</p>
-                        </div>
-                      )}
-                      {selectedUser.businessDetails.panNumber && (
-                        <div>
-                          <span className="text-slate-600">PAN Number:</span>
-                          <p className="font-medium text-slate-900">{selectedUser.businessDetails.panNumber}</p>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              )}
 
               {/* Documents */}
               {selectedUser.documents && selectedUser.documents.length > 0 && (
@@ -605,12 +665,12 @@ export const UserManagement: React.FC = () => {
                   </Button>
                   <Button
                     onClick={() => {
-                      handleRejectUser(selectedUser._id, 'Documents not verified');
+                      handleRejectUser(selectedUser._id);
                       setIsModalOpen(false);
                     }}
                     loading={actionLoading === selectedUser._id}
-                    variant="danger"
-                    className="flex-1"
+                    variant="outline"
+                    className="flex-1 text-red-600 border-red-200 hover:bg-red-50"
                     icon={<XCircleIcon className="h-4 w-4" />}
                   >
                     Reject User
@@ -621,28 +681,78 @@ export const UserManagement: React.FC = () => {
           )}
         </Modal>
 
-        {/* Confirmation Modal */}
-        <ConfirmationModal
-          isOpen={isConfirmModalOpen}
-          onClose={() => setIsConfirmModalOpen(false)}
-          onConfirm={handleConfirmAction}
-          title={
-            confirmAction?.type === 'approve' ? 'Approve User' :
-            confirmAction?.type === 'reject' ? 'Reject User' :
-            'Toggle User Access'
-          }
-          message={
-            confirmAction?.type === 'approve' ? `Are you sure you want to approve this user with ${trialDays} days trial?` :
-            confirmAction?.type === 'reject' ? 'Are you sure you want to reject this user?' :
-            'Are you sure you want to toggle user access?'
-          }
-          confirmText={
-            confirmAction?.type === 'approve' ? 'Approve' :
-            confirmAction?.type === 'reject' ? 'Reject' :
-            'Toggle Access'
-          }
-          type={confirmAction?.type === 'reject' ? 'danger' : 'info'}
-        />
+        {/* Limits Management Modal */}
+        <Modal
+          isOpen={isLimitsModalOpen}
+          onClose={() => setIsLimitsModalOpen(false)}
+          title="Manage User Limits"
+          size="md"
+        >
+          {selectedUser && (
+            <div className="space-y-6">
+              {/* User Info */}
+              <div className="bg-slate-50 border border-slate-200 rounded-xl p-4">
+                <h3 className="font-semibold text-slate-900 mb-2">{selectedUser.name}</h3>
+                <p className="text-slate-600 capitalize">{selectedUser.role.replace('_', ' ')}</p>
+              </div>
+
+              {/* Limits Form */}
+              <div className="space-y-4">
+                {selectedUser.role === 'load_provider' && (
+                  <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-2">
+                      Maximum Loads Allowed
+                    </label>
+                    <input
+                      type="number"
+                      value={limitsForm.maxLoadsAllowed}
+                      onChange={(e) => setLimitsForm(prev => ({ ...prev, maxLoadsAllowed: Number(e.target.value) }))}
+                      className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none"
+                      min="1"
+                      max="100"
+                    />
+                    <p className="text-xs text-slate-500 mt-1">
+                      Current: {selectedUser.loadsPosted || 0} loads posted
+                    </p>
+                  </div>
+                )}
+
+                <div>
+                  <label className="block text-sm font-medium text-slate-700 mb-2">
+                    Trial Days (if extending trial)
+                  </label>
+                  <input
+                    type="number"
+                    value={limitsForm.trialDays}
+                    onChange={(e) => setLimitsForm(prev => ({ ...prev, trialDays: Number(e.target.value) }))}
+                    className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none"
+                    min="1"
+                    max="90"
+                  />
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="flex space-x-4">
+                <Button
+                  onClick={() => setIsLimitsModalOpen(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdateLimits}
+                  loading={actionLoading === selectedUser._id}
+                  className="flex-1 bg-emerald-600 hover:bg-emerald-700"
+                  icon={<CogIcon className="h-4 w-4" />}
+                >
+                  Update Limits
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
       </div>
     </div>
   );

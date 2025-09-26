@@ -212,7 +212,7 @@ const AppContent: React.FC = () => {
             </ProtectedRoute>
           }
         />
-        <Route
+        {/* <Route
           path="/bidding/:loadId"
           element={
             <ProtectedRoute>
@@ -221,7 +221,7 @@ const AppContent: React.FC = () => {
                 <AnimatedFooter />       
             </ProtectedRoute>
           }
-        />
+        /> */}
 
           <Route
           path="/live-bidding"

@@ -12,7 +12,7 @@ import cloudinary from '../config/cloudinary.js';
 // @route   POST /api/vehicles
 // @access  Private (Vehicle Owner only)
 export const createVehicle = async (req, res) => {
-  console.log('Create vehicle request body:', req.body);
+  //console.log('Create vehicle request body:', req.body);
   //console.log('Create vehicle request files:', req.files);
   try {
     const {
@@ -309,9 +309,7 @@ export const getMatchingVehicles = async (req, res) => {
       status: 'available',
       isApproved: true,
       availability: { $lte: new Date(load.loadingDate) },
-      ...(load.vehicleRequirement.trailerType && load.vehicleRequirement.trailerType !== 'none' && {
-        trailerType: load.vehicleRequirement.trailerType
-      })
+      
     }).populate('ownerId', 'name phone email');
 
     res.json({

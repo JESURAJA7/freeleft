@@ -33,7 +33,7 @@ import upload from '../middleware/multer.js';
 
 const router = express.Router();
 
-router.post('/', protect, authorize('vehicle_owner'),  upload.array("images", 8),createVehicle);
+router.post('/', protect, authorize('vehicle_owner'),  upload.array("images", 12),createVehicle);
 router.get('/', protect, authorize('vehicle_owner'), getMyVehicles);
 router.get('/available', protect, getAvailableVehicles);
 router.get('/:id', protect, getVehicle);
