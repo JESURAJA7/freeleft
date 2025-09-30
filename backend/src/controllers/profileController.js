@@ -165,7 +165,9 @@ export const updateProfile = async (req, res) => {
       }
     }
 
- 
+    // -------------------------
+    // Profile Completion Check
+    // -------------------------
     let isComplete = true;
 
     // Address required
@@ -174,15 +176,15 @@ export const updateProfile = async (req, res) => {
     }
 
     if (user.role === 'load_provider') {
+      // ✅ Only companyName & businessType are required
       if (
         !user.businessDetails?.companyName ||
-        !user.businessDetails?.businessType ||
-        !user.businessDetails?.gstNumber ||
-        !user.businessDetails?.panNumber
+        !user.businessDetails?.businessType
       ) {
         isComplete = false;
       }
     } else if (user.role === 'vehicle_owner') {
+      // ✅ All required for vehicle_owner
       if (!user.ownerType || !user.licenseNumber || !user.licenseExpiry) {
         isComplete = false;
       }
@@ -213,6 +215,7 @@ export const updateProfile = async (req, res) => {
     });
   }
 };
+
 
 
 // Delete uploaded image

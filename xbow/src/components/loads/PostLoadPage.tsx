@@ -166,6 +166,7 @@ export const PostLoadPage = () => {
   const checkProfileCompletion = async () => {
     try {
       const response = await profileAPI.getCompletionStatus();
+      //console.log('Profile completion response:', response);
       if (response.data.success) {
         setProfileComplete(response.data.data.isComplete);
         if (!response.data.data.isComplete) {

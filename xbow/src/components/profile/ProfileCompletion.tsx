@@ -50,6 +50,7 @@ export const ProfileCompletion: React.FC = () => {
   const fetchCompletionStatus = async () => {
     try {
       const response = await profileAPI.getCompletionStatus();
+      //console.log('Completion Status Response:', response);
       if (response.data.success) {
         setCompletionStatus(response.data.data);
       }
@@ -162,6 +163,8 @@ export const ProfileCompletion: React.FC = () => {
       const response = await profileAPI.updateProfile(submitData);
       if (response.data.success) {
         toast.success('Profile updated successfully!');
+        // set iscomplete to true to show success message
+        setCompletionStatus({ isComplete: true, missingFields: [] });
         await refreshUser();
         await fetchCompletionStatus();
         window.location.href = '/dashboard';
