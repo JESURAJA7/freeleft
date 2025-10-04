@@ -42,6 +42,7 @@ export const VehicleMatchingModal: React.FC<VehicleMatchingModalProps> = ({
     const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
     const [loading, setLoading] = useState(false);
     const [responding, setResponding] = useState<string | null>(null);
+
     const [messageModal, setMessageModal] = useState<{ isOpen: boolean; vehicleId: string; ownerName: string }>({
         isOpen: false,
         vehicleId: '',
@@ -265,7 +266,10 @@ export const VehicleMatchingModal: React.FC<VehicleMatchingModalProps> = ({
                                                                             <StarIcon key={i} className="h-4 w-4 text-slate-300" />
                                                                         )
                                                                     ))}
-                                                                    <span className="ml-2 text-slate-600">({application.vehicle.rating.toFixed(1)})</span>
+                                                                    <span className="ml-2 text-slate-600">
+                                                                        ({application.vehicle.rating?.toFixed(1) ?? '0.0'})
+                                                                    </span>
+
                                                                 </div>
                                                             </div>
                                                         </div>
@@ -312,7 +316,7 @@ export const VehicleMatchingModal: React.FC<VehicleMatchingModalProps> = ({
                                                     )}
 
                                                     {/* Actions */}
-                                                    {application.status === 'pending' && (
+                                                    {(application.status === 'pending'  || application.status === 'admin_approved' )&&(
                                                         <div className="space-y-3">
                                                             {showPriceInput === application._id ? (
                                                                 <div className="space-y-3">

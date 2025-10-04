@@ -6,6 +6,8 @@ import POD from '../models/POD.js';
 import Payment from '../models/Payment.js';
 import Commission from '../models/Commission.js';
 import AdminSettings from '../models/AdminSettings.js';
+import VehicleApplication from '../models/VehicleApplication.js';
+import LoadAssignment from '../models/LoadAssignment.js';
 import jwt from 'jsonwebtoken';
 import bcrypt from 'bcryptjs';
 
@@ -1141,6 +1143,227 @@ export const updateVehicleLimits = async (req, res) => {
     });
   }
 };
+
+// Vehicle Application Management
+export const getVehicleApplications = async (req, res) => {
+  try {
+    const applications = await VehicleApplication.find({})
+      .populate({
+        path: 'vehicleId',
+        populate: {
+          path: 'ownerId',
+          select: 'name email phone'
+        }
+      })
+      .populate('loadId')
+      .populate('adminReviewedBy', 'name')
+      .sort({ appliedAt: -1 });
+
+    // Transform data to include nested information
+    const transformedApplications = applications.map(app => ({
+      ...app.toObject(),
+      vehicle: app.vehicleId,
+      load: app.loadId
+    }));
+
+    res.json({
+      success: true,
+      data: transformedApplications
+    });
+  } catch (error) {
+    console.error('Error getting vehicle applications:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get vehicle applications'
+    });
+  }
+};
+
+export const reviewVehicleApplication = async (req, res) => {
+  try {
+    const { applicationId } = req.params;
+    const { action, adjustedPrice, comments } = req.body;
+    // const adminId = req.user.id;
+    // console.log("Admin ID:", adminId);
+    const application = await VehicleApplication.findById(applicationId)
+      .populate('loadId')
+      .populate('vehicleId');
+
+    if (!application) {
+      return res.status(404).json({
+        success: false,
+        message: 'Application not found'
+      });
+    }
+
+    if (application.status !== 'admin_review') {
+      return res.status(400).json({
+        success: false,
+        message: 'Application has already been reviewed'
+      });
+    }
+
+    // Update application with admin review
+    const updateData = {
+      status: action === 'approve' ? 'admin_approved' : 'admin_rejected',
+      adminReviewedAt: new Date(),
+      // adminReviewedBy: adminId,
+      adminComments: comments
+    };
+
+    if (action === 'approve' && adjustedPrice) {
+      updateData.adminAdjustedPrice = adjustedPrice;
+    }
+
+    const updatedApplication = await VehicleApplication.findByIdAndUpdate(
+      applicationId,
+      updateData,
+      { new: true, runValidators: true }
+    )
+    .populate('loadId')
+    .populate('vehicleId')
+    .populate('adminReviewedBy', 'name');
+
+    //console.log("Updated Application:", updatedApplication);
+
+    // If approved, notify load provider
+    if (action === 'approve') {
+      // TODO: Send real-time notification to load provider
+      console.log(`Application ${applicationId} approved, notifying load provider`);
+    }
+
+    return res.json({
+      success: true,
+      message: `Application ${action}d successfully`,
+      data: updatedApplication
+    });
+    
+  } catch (error) {
+    console.error('Error reviewing application:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to review application',
+      error: error.message
+    });
+  }
+};
+
+// getXbowLoads
+export const getXbowLoads = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+    let query = { withXBowSupport: true };
+    if (status) query.status = status;
+    const loads = await Load.find(query)
+      .populate('loadProviderId', 'name email phone companyName')
+      .populate('assignedVehicleId', 'vehicleNumber ownerName')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    const total = await Load.countDocuments(query);
+    res.status(200).json({
+      success: true,
+      count: loads.length,
+      total,
+      data: loads
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+//find matching vehicles for a load
+export const findMatchedVehicles = async (req, res) => {
+  try {
+    const { loadId } = req.params;
+
+    const load = await Load.findById(loadId);
+    if (!load) {
+      return res.status(404).json({
+        success: false,
+        message: 'Load not found'
+      });
+    }
+
+    const totalWeight = load.materials.reduce((sum, material) => sum + material.totalWeight, 0);
+
+    // Find vehicles that match the requirements
+    const matchingVehicles = await Vehicle.find({
+      vehicleType: load.vehicleRequirement.vehicleType,
+      vehicleSize: { $gte: load.vehicleRequirement.size },
+      passingLimit: { $gte: totalWeight / 1000 },
+      status: 'available',
+      isApproved: true,
+      availability: { $lte: new Date(load.loadingDate) },
+      
+    }).populate('ownerId', 'name phone email');
+
+    res.json({
+      success: true,
+      data: matchingVehicles
+    });
+  } catch (error) {
+    console.error('Error getting matching vehicles:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to get matching vehicles'
+    });
+  }
+};
+
+// assignVehicleToLoad
+export const assignVehicleToLoad = async (req, res) => {
+  try {
+    const { loadId } = req.params;
+    const { vehicleId } = req.body;
+    const load = await Load.findById(loadId);
+    const vehicle = await Vehicle.findById(vehicleId);
+    if (!load || !vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Load or Vehicle not found'
+      });
+    }
+    // Check if vehicle is compatible
+    const totalWeight = load.materials.reduce((sum, material) => sum + material.totalWeight, 0);
+    if (vehicle.passingLimit * 1000 < totalWeight) {
+      return res.status(400).json({
+        success: false,
+        message: 'Vehicle weight capacity insufficient for this load'
+      });
+    }
+    // Assign load to vehicle
+    load.assignedVehicleId = vehicleId;
+    load.status = 'assigned';
+    await load.save();
+
+    vehicle.status = 'assigned';
+    await vehicle.save();
+
+    // Optionally, create a LoadAssignment record if your schema supports it
+    await LoadAssignment.create({
+      loadId: load._id,
+      vehicleId: vehicle._id,
+      assignedAt: new Date(),
+      assignedBy: req.user?._id
+    });
+
+    res.status(200).json({
+      success: true,
+      message: 'Vehicle assigned to load successfully',
+      data: { load, vehicle }
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
 
 export default {
   getDashboardStats,

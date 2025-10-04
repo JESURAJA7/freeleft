@@ -24,7 +24,13 @@ import {
   updateAdminProfile,
   changePassword,
   updateUserLimits,
-  updateVehicleLimits
+  getVehicleApplications,
+  reviewVehicleApplication,
+  updateVehicleLimits,
+  getXbowLoads,
+  findMatchedVehicles,
+  assignVehicleToLoad,
+  
 } from "../controllers/adminController.js";
 import { protect, authorize } from "../middleware/auth.js";
 
@@ -77,5 +83,23 @@ router.put("/settings", updateAdminSettings);
 
 // Reports
 router.get("/reports/:type", generateReport);
+
+// Vehicle Application Management
+router.get('/vehicle-applications', getVehicleApplications);
+//router.patch('/vehicle-applications/:applicationId/review',protect,authorize('admin'),reviewVehicleApplication);
+router.patch(
+  '/vehicle-applications/:applicationId/review',
+  
+  (req, res, next) => {
+    console.log('Review route hit', req.params, req.body);
+    next();
+  },
+  reviewVehicleApplication
+);
+
+// Xbow Loads and Vehicle Assignment
+router.get('/xbow-loads', getXbowLoads);
+router.get('/find-matched-vehicles/:loadId/xbow-support', findMatchedVehicles);
+router.post('/assign-vehicle/:loadId/xbow-support', assignVehicleToLoad);
 
 export default router;

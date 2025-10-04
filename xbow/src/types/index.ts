@@ -316,9 +316,14 @@ export interface VehicleApplication {
   vehicle: Vehicle;
   bidPrice?: number;
   message?: string;
-  status: 'pending' | 'accepted' | 'rejected';
+  status: 'pending'| 'admin_review'|'admin_approved'| 'admin_rejected'| 'accepted'| 'rejected';
   appliedAt: string;
   respondedAt?: string;
+  load?: Load;
+  adminComments?: string;
+  adminAdjustedPrice?: number;
+  adminReviewedAt?: string;
+
 }
 
 export interface LoadAssignment {

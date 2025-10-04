@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { 
+import {
   Bars3Icon,
   XMarkIcon,
   HomeIcon,
@@ -27,12 +27,13 @@ const menuItems = [
   { id: 'dashboard', label: 'Dashboard', icon: HomeIcon, href: '/admin/dashboard' },
   { id: 'users', label: 'User Management', icon: UsersIcon, href: '/admin/users' },
   { id: 'vehicles', label: 'Vehicle Management', icon: TruckIcon, href: '/admin/vehicles' },
-  { id: 'loads', label: 'Load Management', icon: DocumentTextIcon, href: '/admin/loads' },
-  { id: 'matching', label: 'Load-Vehicle Matching', icon: LinkIcon, href: '/admin/matching' },
-  { id: 'pods', label: 'POD Management', icon: DocumentTextIcon, href: '/admin/pods' },
-  { id: 'commission', label: 'Commission', icon: CurrencyRupeeIcon, href: '/admin/commission' },
-  { id: 'payments', label: 'Payments', icon: ChartBarIcon, href: '/admin/payments' },
-  { id: 'settings', label: 'Settings', icon: CogIcon, href: '/admin/settings' }
+  // { id: 'loads', label: 'Load Management', icon: DocumentTextIcon, href: '/admin/loads' },
+  { id: 'XbowSupport', label: 'Xbow Support', icon: LinkIcon, href: '/admin/xbow_support' },
+  {
+    id: 'loadApplications', label: 'Load Applications', icon: DocumentTextIcon, href: '/admin/load - applications'},
+  // { id: 'commission', label: 'Commission', icon: CurrencyRupeeIcon, href: '/admin/commission' },
+  // { id: 'payments', label: 'Payments', icon: ChartBarIcon, href: '/admin/payments' },
+  // { id: 'settings', label: 'Settings', icon: CogIcon, href: '/admin/settings' }
 ];
 
 export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, onTabChange }) => {
@@ -53,9 +54,8 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, o
       <motion.div
         initial={{ x: -300 }}
         animate={{ x: 0 }}
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-auto ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-slate-900 transform transition-transform duration-300 ease-in-out lg:relative lg:translate-x-0 lg:z-auto ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'
+          }`}
       >
         <div className="flex items-center justify-center h-16 px-4 bg-slate-800">
           <div className="flex items-center space-x-3">
@@ -83,11 +83,10 @@ export const AdminLayout: React.FC<AdminLayoutProps> = ({ children, activeTab, o
                     onTabChange(item.id);
                     setIsSidebarOpen(false);
                   }}
-                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${
-                    activeTab === item.id
+                  className={`w-full flex items-center space-x-3 px-4 py-3 rounded-xl text-left transition-all duration-200 ${activeTab === item.id
                       ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white shadow-lg'
                       : 'text-slate-300 hover:bg-slate-800 hover:text-white'
-                  }`}
+                    }`}
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                 >

@@ -12,9 +12,8 @@ import {
 import { Modal } from '../common/Modal';
 import { Button } from '../common/CustomButton';
 import { Input } from '../common/CustomInput';
-import { LoadingSpinner } from '../common/LoadingSpinner';
 import { vehicleMatchingAPI } from '../../services/api';
-import type { Load, Vehicle } from '../../types/index';
+import type { Load, Vehicle } from '../../types';
 import toast from 'react-hot-toast';
 
 interface VehicleApplicationModalProps {
@@ -47,20 +46,16 @@ export const VehicleApplicationModal: React.FC<VehicleApplicationModalProps> = (
     }
   }, [isOpen, vehicles]);
 
-  useEffect(() => {
-  console.log("VehicleApplicationModal Load:", load);
-}, [load]);
-
-
   const isVehicleCompatible = (vehicle: Vehicle) => {
     if (!load) return false;
-    
+
     const totalWeight = load.materials?.reduce((sum, material) => sum + material.totalWeight, 0) || 0;
-    
+
     return (
       vehicle.vehicleSize >= load.vehicleRequirement.size &&
       vehicle.passingLimit >= totalWeight / 1000 &&
       vehicle.status === 'available' &&
+      vehicle.vehicleType === load.vehicleRequirement.vehicleType &&
       vehicle.isApproved &&
       new Date(vehicle.availability) <= new Date(load.loadingDate)
     );
@@ -85,11 +80,11 @@ export const VehicleApplicationModal: React.FC<VehicleApplicationModalProps> = (
         Number(bidPrice),
         message.trim() || undefined
       );
-      
+
       toast.success('Application sent successfully!');
       onApplicationSent();
       onClose();
-      
+
       // Reset form
       setSelectedVehicle(null);
       setBidPrice('');
@@ -144,6 +139,33 @@ export const VehicleApplicationModal: React.FC<VehicleApplicationModalProps> = (
               <span className="text-slate-600">Payment:</span>
               <p className="font-medium text-slate-900 uppercase">{load.paymentTerms}</p>
             </div>
+            <div className="col-span-2 md:col-span-4">
+              <span className="text-slate-600">Materials:</span>
+              <div className="mt-2 flex space-x-2 overflow-x-auto">
+                {load.materials?.map((material, index) => (
+                  <div
+                   key={material.id|| `${material.name}-${index}`}
+
+                    className="flex-shrink-0 w-20 h-24 bg-white border border-slate-200 rounded-lg flex flex-col items-center justify-center p-1"
+                  >
+                    {material.photos && material.photos.length > 0 ? (
+                      <img
+                        src={material.photos[0].url}
+                        alt={material.name}
+                        className="w-full h-16 object-cover rounded-lg"
+                      />
+                    ) : (
+                      <div className="text-slate-400 text-xs text-center px-2">
+                        No Image
+                      </div>
+                    )}
+                    <p className="text-xs text-slate-700 mt-1 text-center">
+                      {material.name}
+                    </p>
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
 
@@ -180,7 +202,7 @@ export const VehicleApplicationModal: React.FC<VehicleApplicationModalProps> = (
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="grid grid-cols-2 gap-2 text-sm">
                     <div>
                       <span className="text-slate-600">Type:</span>
@@ -262,7 +284,7 @@ export const VehicleApplicationModal: React.FC<VehicleApplicationModalProps> = (
             className="flex-1 bg-emerald-600 hover:bg-emerald-700"
             icon={<HandRaisedIcon className="h-4 w-4" />}
           >
-            Send Application
+            Send for Admin Review
           </Button>
         </div>
       </div>

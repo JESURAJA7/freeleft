@@ -31,8 +31,8 @@ const vehicleApplicationSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['pending', 'accepted', 'rejected'],
-    default: 'pending'
+    enum: ['pending', 'admin_review', 'admin_approved', 'admin_rejected', 'accepted', 'rejected'],
+    default: 'admin_review'
   },
   appliedAt: {
     type: Date,
@@ -40,6 +40,22 @@ const vehicleApplicationSchema = new mongoose.Schema({
   },
   respondedAt: {
     type: Date
+  },
+  adminReviewedAt: {
+    type: Date
+  },
+  adminReviewedBy: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'User'
+  },
+  adminAdjustedPrice: {
+    type: Number,
+    min: 0
+  },
+  adminComments: {
+    type: String,
+    trim: true,
+    maxlength: 1000
   },
   respondedBy: {
     type: mongoose.Schema.Types.ObjectId,

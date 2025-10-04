@@ -6,6 +6,8 @@ import { VehicleManagement } from './VehicleManagement';
 import { LoadVehicleMatching } from './LoadVehicleMatching';
 import { CommissionManagement } from './CommissionManagement';
 import { PODManagementPage } from './PODManagementPage';
+import { AdminApplicationsPage } from './AdminApplicationsPage';
+import { XBOWSupportPage } from './XBOWSupportPage';
 
 export const AdminApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -21,12 +23,12 @@ export const AdminApp: React.FC = () => {
         return <UserManagement />;
       case 'vehicles':
         return <VehicleManagement />;
-      case 'matching':
-        return <LoadVehicleMatching />;
+      case 'XbowSupport':
+        return <XBOWSupportPage />;
       case 'commission':
         return <CommissionManagement />;
-      case 'pods':
-        return <PODManagementPage />;
+      case 'loadApplications':
+        return <AdminApplicationsPage/>;
       default:
         return <AdminDashboard />;
     }

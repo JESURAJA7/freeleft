@@ -22,7 +22,7 @@ const userSchema = new mongoose.Schema({
   // subscription details
   subscriptionStatus: { type: String, enum: ['active','inactive','trial','expired'], default: 'inactive' },
   subscriptionEndDate: Date,
-  trialDays: { type: Number, default: 0 },
+
   paymentHistory: [{
     amount: Number,
     paymentId: String,

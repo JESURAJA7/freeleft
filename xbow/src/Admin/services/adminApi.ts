@@ -5,6 +5,9 @@ import toast from 'react-hot-toast';
 const API_BASE_URL = import.meta.env.VITE_API_URL;
 console.log("API_BASE_URL:", API_BASE_URL);
 
+const token = Cookies.get('xbow_admin_token');
+console.log("Admin Token:", token);
+
 const adminApi = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
@@ -94,6 +97,27 @@ export const adminAPI = {
   // Reports
   generateReport: (type: string, params?: any) =>
     adminApi.get(`${API_BASE_URL}/admin/reports/${type}`, { params }),
+
+
+// Vehicle Application Management
+  getVehicleApplications: () => adminApi.get(`${API_BASE_URL}/admin/vehicle-applications`),
+reviewVehicleApplication: (applicationId: string, data: {
+  action: 'approve' | 'reject';
+  adjustedPrice?: number;
+  comments?: string;
+}) => adminApi.patch(
+  `${API_BASE_URL}/admin/vehicle-applications/${applicationId}/review`, // relative URL works with baseURL
+  data
+),
+
+// get xbow support requests and assign vehicles
+getXBOWLoads: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/xbow-loads`, { params }),
+findMatchedVehicles: (loadId: string) => adminApi.get(`${API_BASE_URL}/admin/find-matched-vehicles/${loadId}/xbow-support`),
+assignVehicleToLoad: (loadId: string, vehicleId: string) =>
+  adminApi.post(`${API_BASE_URL}/admin/assign-vehicle/${loadId}/xbow-support`, { vehicleId }),
+
 };
+
+
 
 export default adminApi;

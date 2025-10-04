@@ -183,93 +183,93 @@ export const PostLoadPage = () => {
   };
 
   // Add this utility function
-const compressImage = (file: File, maxSizeKB = 500): Promise<File> => {
-  return new Promise((resolve) => {
-    if (file.size <= maxSizeKB * 1024) {
-      resolve(file);
-      return;
-    }
-
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
-    const img = new Image();
-    
-    img.onload = () => {
-      const MAX_WIDTH = 1024;
-      const MAX_HEIGHT = 1024;
-      let width = img.width;
-      let height = img.height;
-
-      if (width > height) {
-        if (width > MAX_WIDTH) {
-          height *= MAX_WIDTH / width;
-          width = MAX_WIDTH;
-        }
-      } else {
-        if (height > MAX_HEIGHT) {
-          width *= MAX_HEIGHT / height;
-          height = MAX_HEIGHT;
-        }
+  const compressImage = (file: File, maxSizeKB = 500): Promise<File> => {
+    return new Promise((resolve) => {
+      if (file.size <= maxSizeKB * 1024) {
+        resolve(file);
+        return;
       }
 
-      canvas.width = width;
-      canvas.height = height;
-      ctx?.drawImage(img, 0, 0, width, height);
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      const img = new Image();
 
-      canvas.toBlob((blob) => {
-        if (blob) {
-          const compressedFile = new File([blob], file.name, {
-            type: 'image/jpeg',
-            lastModified: Date.now(),
-          });
-          resolve(compressedFile);
+      img.onload = () => {
+        const MAX_WIDTH = 1024;
+        const MAX_HEIGHT = 1024;
+        let width = img.width;
+        let height = img.height;
+
+        if (width > height) {
+          if (width > MAX_WIDTH) {
+            height *= MAX_WIDTH / width;
+            width = MAX_WIDTH;
+          }
         } else {
-          resolve(file);
+          if (height > MAX_HEIGHT) {
+            width *= MAX_HEIGHT / height;
+            height = MAX_HEIGHT;
+          }
         }
-      }, 'image/jpeg', 0.7);
-    };
 
-    img.src = URL.createObjectURL(file);
-  });
-};
+        canvas.width = width;
+        canvas.height = height;
+        ctx?.drawImage(img, 0, 0, width, height);
 
-// Update your handlePhotoUpload function
-const handlePhotoUpload = async (materialIndex: number, photoType: string, file: File) => {
-  try {
-    const compressedFile = await compressImage(file);
-    
-    const updatedMaterials = [...materials];
-    const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            const compressedFile = new File([blob], file.name, {
+              type: 'image/jpeg',
+              lastModified: Date.now(),
+            });
+            resolve(compressedFile);
+          } else {
+            resolve(file);
+          }
+        }, 'image/jpeg', 0.7);
+      };
 
-    if (photoIndex !== -1) {
-      if (updatedMaterials[materialIndex].photos[photoIndex].preview) {
-        URL.revokeObjectURL(updatedMaterials[materialIndex].photos[photoIndex].preview);
+      img.src = URL.createObjectURL(file);
+    });
+  };
+
+  // Update your handlePhotoUpload function
+  const handlePhotoUpload = async (materialIndex: number, photoType: string, file: File) => {
+    try {
+      const compressedFile = await compressImage(file);
+
+      const updatedMaterials = [...materials];
+      const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
+
+      if (photoIndex !== -1) {
+        if (updatedMaterials[materialIndex].photos[photoIndex].preview) {
+          URL.revokeObjectURL(updatedMaterials[materialIndex].photos[photoIndex].preview);
+        }
+
+        updatedMaterials[materialIndex].photos[photoIndex] = {
+          type: photoType,
+          file: compressedFile,
+          preview: URL.createObjectURL(compressedFile)
+        };
       }
 
-      updatedMaterials[materialIndex].photos[photoIndex] = {
-        type: photoType,
-        file: compressedFile,
-        preview: URL.createObjectURL(compressedFile)
-      };
-    }
+      setMaterials(updatedMaterials);
+    } catch (error) {
+      console.error('Error compressing image:', error);
+      // Fallback to original file
+      const updatedMaterials = [...materials];
+      const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
 
-    setMaterials(updatedMaterials);
-  } catch (error) {
-    console.error('Error compressing image:', error);
-    // Fallback to original file
-    const updatedMaterials = [...materials];
-    const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
-
-    if (photoIndex !== -1) {
-      updatedMaterials[materialIndex].photos[photoIndex] = {
-        type: photoType,
-        file,
-        preview: URL.createObjectURL(file)
-      };
+      if (photoIndex !== -1) {
+        updatedMaterials[materialIndex].photos[photoIndex] = {
+          type: photoType,
+          file,
+          preview: URL.createObjectURL(file)
+        };
+      }
+      setMaterials(updatedMaterials);
     }
-    setMaterials(updatedMaterials);
-  }
-};
+  };
   const handleRemovePhoto = (materialIndex: number, photoType: string) => {
     const updatedMaterials = [...materials];
     const photoIndex = updatedMaterials[materialIndex].photos.findIndex(p => p.type === photoType);
@@ -606,6 +606,13 @@ const handlePhotoUpload = async (materialIndex: number, photoType: string, file:
                   </Button>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
+                  <Input
+                    label="Pin Code"
+                    value={formData.loadingLocation.pincode}
+                    onChange={(value: string) => handleLocationChange('loadingLocation', 'pincode', value)}
+                    placeholder="600001"
+                    required
+                  />
                   <div className="col-span-2">
                     <Input
                       label="Place"
@@ -619,23 +626,17 @@ const handlePhotoUpload = async (materialIndex: number, photoType: string, file:
                     label="District"
                     value={formData.loadingLocation.district}
                     onChange={(value: string) => handleLocationChange('loadingLocation', 'district', value)}
-                    placeholder="Central Delhi"
+                    placeholder="Madurai"
                     required
                   />
                   <Input
                     label="State"
                     value={formData.loadingLocation.state}
                     onChange={(value: string) => handleLocationChange('loadingLocation', 'state', value)}
-                    placeholder="Delhi"
+                    placeholder="Tamilnadu"
                     required
                   />
-                  <Input
-                    label="Pin Code"
-                    value={formData.loadingLocation.pincode}
-                    onChange={(value: string) => handleLocationChange('loadingLocation', 'pincode', value)}
-                    placeholder="110001"
-                    required
-                  />
+
                 </div>
               </div>
 
@@ -654,6 +655,14 @@ const handlePhotoUpload = async (materialIndex: number, photoType: string, file:
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div className="col-span-2">
+
+                    <Input
+                      label="Pin Code"
+                      value={formData.unloadingLocation.pincode}
+                      onChange={(value: string) => handleLocationChange('unloadingLocation', 'pincode', value)}
+                      placeholder="626001"
+                      required
+                    />
                     <Input
                       label="Place"
                       value={formData.unloadingLocation.place}
@@ -676,13 +685,7 @@ const handlePhotoUpload = async (materialIndex: number, photoType: string, file:
                     placeholder="Uttar Pradesh"
                     required
                   />
-                  <Input
-                    label="Pin Code"
-                    value={formData.unloadingLocation.pincode}
-                    onChange={(value: string) => handleLocationChange('unloadingLocation', 'pincode', value)}
-                    placeholder="201301"
-                    required
-                  />
+
                 </div>
               </div>
             </div>
@@ -947,8 +950,8 @@ const handlePhotoUpload = async (materialIndex: number, photoType: string, file:
                             <label
                               htmlFor={`photo-${index}-${photoConfig.type}`}
                               className={`block text-sm font-medium cursor-pointer transition-colors duration-200 ${photo?.file
-                                  ? 'text-green-600 hover:text-green-700'
-                                  : 'text-blue-600 hover:text-blue-700'
+                                ? 'text-green-600 hover:text-green-700'
+                                : 'text-blue-600 hover:text-blue-700'
                                 }`}
                             >
                               {photoConfig.label}
