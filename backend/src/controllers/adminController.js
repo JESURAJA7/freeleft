@@ -1347,8 +1347,10 @@ export const assignVehicleToLoad = async (req, res) => {
     await LoadAssignment.create({
       loadId: load._id,
       vehicleId: vehicle._id,
-      assignedAt: new Date(),
-      assignedBy: req.user?._id
+      startedAt: new Date(),
+      loadProviderId: load.loadProviderId,
+      vehicleOwnerId: vehicle.ownerId,
+      agreedPrice: load.agreedPrice
     });
 
     res.status(200).json({

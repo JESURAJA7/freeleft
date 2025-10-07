@@ -29,6 +29,7 @@ import { AnimatedFooter } from './components/layout/AnimatedFooter';
 import { BiddingMonitorPage } from './screens/Bidding/BiddingMonitorPage';
 import { LoadProgressPage } from './screens/Progress/LoadProgressPage';
 import { LoadProgressListPage } from './screens/Progress/LoadProgressListPage';
+import { PaymentPage } from './screens/subscription/PaymentPage';
 // Protected Route Component
 const ProtectedRoute: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user, isLoading } = useAuth();
@@ -142,6 +143,17 @@ const AppContent: React.FC = () => {
             <ProtectedRoute>
               <Navbar />
               <AddVehiclePage />
+              <AnimatedFooter />
+            </ProtectedRoute>
+          }
+        />
+
+        <Route
+          path="/payment"
+          element={
+            <ProtectedRoute>
+              <Navbar />
+              <PaymentPage />
               <AnimatedFooter />
             </ProtectedRoute>
           }

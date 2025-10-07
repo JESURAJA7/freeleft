@@ -49,6 +49,7 @@ export const Navbar: React.FC = () => {
         { name: 'Bidding', href: '/bidding-info' },
         { name: 'Live Bidding', href: '/live-bidding' },
         { name: 'Load Progress', href: '/load-progress-list' },
+        { name: 'Payment', href: '/payment' },
       ]
     : [
         { name: 'Dashboard', href: '/dashboard' },
@@ -58,6 +59,7 @@ export const Navbar: React.FC = () => {
         { name: 'Bidding', href: '/bidding-info' },
         { name: 'Live Bidding', href: '/live-bidding' },
         { name: 'Vehicle Progress', href: '/load-progress-list' },
+        { name: 'Payment', href: '/payment' },
       ];
 
   const handleLogout = () => {

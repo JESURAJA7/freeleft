@@ -26,7 +26,7 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Load } from '../../types/index';
+import type { Load, Vehicle } from '../../types/index';
 import { Button } from '../../components/common/CustomButton';
 import { Input } from '../../components/common/CustomInput';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
@@ -34,36 +34,36 @@ import { Modal } from '../../components/common/Modal';
 import { adminAPI } from '../services/adminApi';
 import toast from 'react-hot-toast';
 
-interface Vehicle {
-  _id: string;
-  vehicleNumber: string;
-  vehicleType: string;
-  vehicleSize: number;
-  passingLimit: number;
-  ownerName: string;
-  ownerPhone: string;
-  ownerEmail: string;
-  currentLocation: {
-    place: string;
-    state: string;
-    coordinates?: {
-      latitude: number;
-      longitude: number;
-    };
-  };
-  status: 'available' | 'busy' | 'maintenance';
-  rating: number;
-  completedTrips: number;
-  isVerified: boolean;
-  documents: {
-    rc: { verified: boolean };
-    insurance: { verified: boolean };
-    permit: { verified: boolean };
-  };
-  lastActive: string;
-  estimatedPrice: number;
-  distance: number;
-}
+// interface Vehicle {
+//   _id: string;
+//   vehicleNumber: string;
+//   vehicleType: string;
+//   vehicleSize: number;
+//   passingLimit: number;
+//   ownerName: string;
+//   ownerPhone: string;
+//   ownerEmail: string;
+//   currentLocation: {
+//     place: string;
+//     state: string;
+//     coordinates?: {
+//       latitude: number;
+//       longitude: number;
+//     };
+//   };
+//   status: 'available' | 'busy' | 'maintenance';
+//   rating: number;
+//   completedTrips: number;
+//   isVerified: boolean;
+//   documents: {
+//     rc: { verified: boolean };
+//     insurance: { verified: boolean };
+//     permit: { verified: boolean };
+//   };
+//   lastActive: string;
+//   estimatedPrice: number;
+//   distance: number;
+// }
 
 export const XBOWSupportPage: React.FC = () => {
   const { user } = useAuth();
@@ -128,7 +128,7 @@ export const XBOWSupportPage: React.FC = () => {
     if (priorityFilter !== 'all') {
       const now = new Date();
       const loadingDate = new Date();
-      
+
       switch (priorityFilter) {
         case 'urgent':
           loadingDate.setDate(now.getDate() + 1);
@@ -158,7 +158,7 @@ export const XBOWSupportPage: React.FC = () => {
     try {
       setMatchingLoading(true);
       setSelectedLoad(load);
-      
+
       const response = await adminAPI.findMatchedVehicles(load._id);
       if (response.data.success) {
         setMatchedVehicles(response.data.data);
@@ -173,37 +173,49 @@ export const XBOWSupportPage: React.FC = () => {
   };
 
   const assignVehicleToLoad = async () => {
-    if (!selectedLoad || !selectedVehicle) return;
+  if (!selectedLoad || !selectedVehicle) return;
 
-    try {
-      setAssigningLoading(true);
-      const response = await adminAPI.assignVehicleToLoad(
-        selectedLoad._id,
-        selectedVehicle._id,
-       
+  try {
+    setAssigningLoading(true);
+    
+    // Prepare the required data
+    const assignmentData = {
+      loadId: selectedLoad._id,
+      vehicleId: selectedVehicle._id,
+      agreedPrice: selectedVehicle.bidPrice , // Use bidPrice or fallback
+      vehicleOwnerId: selectedVehicle.ownerId , // Check both possible field names
+      loadProviderId: selectedLoad.loadProviderId , // Check both possible field names
+      message: assignmentMessage
+    };
+
+    const response = await adminAPI.assignVehicleToLoad(assignmentData);
+
+    if (response.data.success) {
+      toast.success('Vehicle assigned successfully!');
+      setLoads(prevLoads =>
+        prevLoads.map(load =>
+          load._id === selectedLoad._id
+            ? { 
+                ...load, 
+                status: 'assigned', 
+                assignedVehicleId: selectedVehicle._id,
+                agreedPrice: assignmentData.agreedPrice
+              }
+            : load
+        )
       );
-
-      if (response.data.success) {
-        toast.success('Vehicle assigned successfully!');
-        setLoads(prevLoads =>
-          prevLoads.map(load =>
-            load._id === selectedLoad._id
-              ? { ...load, status: 'assigned', assignedVehicleId: selectedVehicle._id }
-              : load
-          )
-        );
-        setIsAssignVehicleModalOpen(false);
-        setIsVehicleMatchingModalOpen(false);
-        setAssignmentMessage('');
-        setSelectedVehicle(null);
-      }
-    } catch (error: any) {
-      console.error('Error assigning vehicle:', error);
-      toast.error('Failed to assign vehicle');
-    } finally {
-      setAssigningLoading(false);
+      setIsAssignVehicleModalOpen(false);
+      setIsVehicleMatchingModalOpen(false);
+      setAssignmentMessage('');
+      setSelectedVehicle(null);
     }
-  };
+  } catch (error: any) {
+    console.error('Error assigning vehicle:', error);
+    toast.error('Failed to assign vehicle');
+  } finally {
+    setAssigningLoading(false);
+  }
+};
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -345,29 +357,29 @@ export const XBOWSupportPage: React.FC = () => {
           className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
         >
           {[
-            { 
-              label: 'Total XBOW Loads', 
-              value: loads.length, 
-              color: 'purple', 
-              icon: ShieldCheckIcon 
+            {
+              label: 'Total XBOW Loads',
+              value: loads.length,
+              color: 'purple',
+              icon: ShieldCheckIcon
             },
-            { 
-              label: 'Pending Assignment', 
-              value: loads.filter(l => l.status === 'posted').length, 
-              color: 'blue', 
-              icon: ClockIcon 
+            {
+              label: 'Pending Assignment',
+              value: loads.filter(l => l.status === 'posted').length,
+              color: 'blue',
+              icon: ClockIcon
             },
-            { 
-              label: 'Active Loads', 
-              value: loads.filter(l => ['assigned', 'enroute'].includes(l.status)).length, 
-              color: 'orange', 
-              icon: TruckIcon 
+            {
+              label: 'Active Loads',
+              value: loads.filter(l => ['assigned', 'enroute'].includes(l.status)).length,
+              color: 'orange',
+              icon: TruckIcon
             },
-            { 
-              label: 'Completed', 
-              value: loads.filter(l => l.status === 'completed').length, 
-              color: 'green', 
-              icon: CheckCircleIcon 
+            {
+              label: 'Completed',
+              value: loads.filter(l => l.status === 'completed').length,
+              color: 'green',
+              icon: CheckCircleIcon
             }
           ].map((stat, index) => {
             const Icon = stat.icon;
@@ -503,13 +515,13 @@ export const XBOWSupportPage: React.FC = () => {
                         <p className="text-sm text-orange-700">{new Date(load.loadingDate).toLocaleDateString()}</p>
                       </div>
 
-                      <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
+                      {/* <div className="bg-purple-50 border border-purple-200 rounded-xl p-4">
                         <div className="flex items-center space-x-2 mb-2">
                           <CurrencyRupeeIcon className="h-4 w-4 text-purple-600" />
                           <span className="text-sm font-medium text-purple-800">Commission</span>
                         </div>
                         <p className="text-sm text-purple-700">₹{load.commissionAmount?.toLocaleString() || '2,500'}</p>
-                      </div>
+                      </div> */}
                     </div>
 
                     {/* Actions */}
@@ -537,7 +549,7 @@ export const XBOWSupportPage: React.FC = () => {
                           Find Vehicles
                         </Button>
                       </div>
-                      
+
                       {load.status === 'assigned' && (
                         <div className="bg-green-50 border border-green-200 rounded-xl p-3">
                           <div className="flex items-center space-x-2">
@@ -704,11 +716,10 @@ export const XBOWSupportPage: React.FC = () => {
                   {matchedVehicles.map((vehicle) => (
                     <div
                       key={vehicle._id}
-                      className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${
-                        selectedVehicle?._id === vehicle._id
+                      className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${selectedVehicle?._id === vehicle._id
                           ? 'border-purple-500 bg-purple-50'
                           : 'border-slate-200 hover:border-slate-300'
-                      }`}
+                        }`}
                       onClick={() => setSelectedVehicle(vehicle)}
                     >
                       <div className="flex items-center justify-between mb-3">
@@ -718,12 +729,17 @@ export const XBOWSupportPage: React.FC = () => {
                           </div>
                           <div>
                             <h4 className="font-semibold text-slate-900">{vehicle.vehicleNumber}</h4>
-                            <p className="text-sm text-slate-600">{vehicle.vehicleType} • {vehicle.vehicleSize}ft</p>
+                            <p className="text-sm text-slate-600">
+                              {vehicle.vehicleType} • {vehicle.vehicleSize}ft
+                            </p>
                           </div>
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-bold text-emerald-600">₹{vehicle.estimatedPrice.toLocaleString()}</p>
-                          <p className="text-xs text-slate-500">{vehicle.distance} km away</p>
+                          {/* Safe price display - uncomment if needed */}
+                          {/* <p className="text-lg font-bold text-emerald-600">
+                    {vehicle.estimatedPrice ? `₹${vehicle.estimatedPrice.toLocaleString()}` : 'N/A'}
+                  </p> */}
+                          {/* <p className="text-xs text-slate-500">{vehicle.distance || 0} km away</p> */}
                         </div>
                       </div>
 
@@ -734,21 +750,32 @@ export const XBOWSupportPage: React.FC = () => {
                         </div>
                         <div>
                           <span className="text-slate-600 text-sm">Location:</span>
-                          <p className="font-medium text-slate-900">{vehicle.currentLocation.place}</p>
+                          {vehicle.operatingAreas?.map((area, index) => (
+                            <div key={index} className="mb-1">
+                              <p className="font-medium text-slate-900">{area.place}</p>
+                              <p className="text-sm text-slate-600">
+                                {area.district}, {area.state}
+                              </p>
+                            </div>
+                          ))}
                         </div>
                         <div>
                           <span className="text-slate-600 text-sm">Rating:</span>
                           <div className="flex items-center space-x-1">
                             <StarSolidIcon className="h-4 w-4 text-yellow-400" />
-                            <span className="font-medium text-slate-900">{vehicle.rating}</span>
-                            <span className="text-xs text-slate-500">({vehicle.completedTrips} trips)</span>
+                            <span className="font-medium text-slate-900">
+                              {vehicle.rating || 'No rating'}
+                            </span>
                           </div>
                         </div>
                         <div>
                           <span className="text-slate-600 text-sm">Status:</span>
-                          <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
-                            vehicle.status === 'available' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'
-                          }`}>
+                          <span
+                            className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${vehicle.status === 'available'
+                                ? 'bg-green-100 text-green-700'
+                                : 'bg-yellow-100 text-yellow-700'
+                              }`}
+                          >
                             {vehicle.status}
                           </span>
                         </div>
@@ -756,13 +783,13 @@ export const XBOWSupportPage: React.FC = () => {
 
                       <div className="flex items-center justify-between">
                         <div className="flex items-center space-x-2">
-                          {vehicle.isVerified && (
+                          {vehicle.isApproved && (
                             <span className="bg-green-100 text-green-700 px-2 py-1 rounded-full text-xs font-medium">
                               Verified
                             </span>
                           )}
                           <span className="bg-blue-100 text-blue-700 px-2 py-1 rounded-full text-xs font-medium">
-                            {vehicle.passingLimit}T Capacity
+                            {(vehicle.passingLimit || 0)}T Capacity
                           </span>
                         </div>
                         <div className="flex items-center space-x-2">
@@ -793,61 +820,61 @@ export const XBOWSupportPage: React.FC = () => {
             </div>
           )}
         </Modal>
-
         {/* Assign Vehicle Modal */}
-        <Modal
-          isOpen={isAssignVehicleModalOpen}
-          onClose={() => setIsAssignVehicleModalOpen(false)}
-          title="Assign Vehicle"
-          size="md"
+<Modal
+  isOpen={isAssignVehicleModalOpen}
+  onClose={() => setIsAssignVehicleModalOpen(false)}
+  title="Assign Vehicle"
+  size="md"
+>
+  {selectedVehicle && selectedLoad && (
+    <div className="space-y-6">
+      <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+        <h3 className="font-semibold text-green-800 mb-2">Assignment Confirmation</h3>
+        <p className="text-green-700">
+          Assign <strong>{selectedVehicle.vehicleNumber}</strong> to load from{' '}
+          <strong>{selectedLoad.loadingLocation.place}</strong> to{' '}
+          <strong>{selectedLoad.unloadingLocation.place}</strong>
+        </p>
+        {/* FIXED LINE - Added safe handling for undefined bidPrice */}
+        <p className="text-sm text-green-600 mt-2">
+          Estimated Price: ₹{(selectedVehicle.bidPrice || 0).toLocaleString()}
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-medium text-slate-700 mb-2">
+          Message to Vehicle Owner (Optional)
+        </label>
+        <textarea
+          value={assignmentMessage}
+          onChange={(e) => setAssignmentMessage(e.target.value)}
+          placeholder="Add any special instructions or information..."
+          rows={4}
+          className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-purple-500 focus:outline-none resize-none"
+        />
+      </div>
+
+      <div className="flex space-x-4">
+        <Button
+          onClick={() => setIsAssignVehicleModalOpen(false)}
+          variant="outline"
+          className="flex-1"
         >
-          {selectedVehicle && selectedLoad && (
-            <div className="space-y-6">
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-                <h3 className="font-semibold text-green-800 mb-2">Assignment Confirmation</h3>
-                <p className="text-green-700">
-                  Assign <strong>{selectedVehicle.vehicleNumber}</strong> to load from{' '}
-                  <strong>{selectedLoad.loadingLocation.place}</strong> to{' '}
-                  <strong>{selectedLoad.unloadingLocation.place}</strong>
-                </p>
-                <p className="text-sm text-green-600 mt-2">
-                  Estimated Price: ₹{selectedVehicle.estimatedPrice.toLocaleString()}
-                </p>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-slate-700 mb-2">
-                  Message to Vehicle Owner (Optional)
-                </label>
-                <textarea
-                  value={assignmentMessage}
-                  onChange={(e) => setAssignmentMessage(e.target.value)}
-                  placeholder="Add any special instructions or information..."
-                  rows={4}
-                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-purple-500 focus:outline-none resize-none"
-                />
-              </div>
-
-              <div className="flex space-x-4">
-                <Button
-                  onClick={() => setIsAssignVehicleModalOpen(false)}
-                  variant="outline"
-                  className="flex-1"
-                >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={assignVehicleToLoad}
-                  loading={assigningLoading}
-                  className="flex-1 bg-purple-600 hover:bg-purple-700"
-                  icon={<CheckCircleIcon className="h-4 w-4" />}
-                >
-                  Confirm Assignment
-                </Button>
-              </div>
-            </div>
-          )}
-        </Modal>
+          Cancel
+        </Button>
+        <Button
+          onClick={assignVehicleToLoad}
+          loading={assigningLoading}
+          className="flex-1 bg-purple-600 hover:bg-purple-700"
+          icon={<CheckCircleIcon className="h-4 w-4" />}
+        >
+          Confirm Assignment
+        </Button>
+      </div>
+    </div>
+  )}
+</Modal>
       </div>
     </div>
   );

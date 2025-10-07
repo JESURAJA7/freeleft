@@ -16,7 +16,7 @@ import {
   CalendarDaysIcon,
   ExclamationTriangleIcon
 } from '@heroicons/react/24/outline';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { vehicleAPI } from '../../services/api';
 import type { Vehicle } from '../../types/index';
@@ -26,6 +26,7 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Modal } from '../../components/common/Modal';
 import { Calendar } from '../../components/common/Calendar';
 import toast from 'react-hot-toast';
+import { nav } from 'framer-motion/client';
 
 interface ExtendedVehicle extends Vehicle {
   trialStartDate?: string;
@@ -35,6 +36,9 @@ interface ExtendedVehicle extends Vehicle {
 }
 
 export const MyVehiclesPage: React.FC = () => {
+
+    const navigate = useNavigate();
+
   const { user } = useAuth();
   const [vehicles, setVehicles] = useState<ExtendedVehicle[]>([]);
   const [filteredVehicles, setFilteredVehicles] = useState<ExtendedVehicle[]>([]);
@@ -492,13 +496,13 @@ export const MyVehiclesPage: React.FC = () => {
                     {/* Payment Button - only show if trial expired or about to expire */}
                     {!vehicle.isPaid && vehicle.remainingTrialDays! <= 0 && (
                       <Button
-                        onClick={() => handlePayment(vehicle.id)}
+                        onClick={() => navigate('/payment')}
                         variant="secondary"
                         size="sm"
                         className="w-full"
                         icon={<CreditCardIcon className="h-4 w-4" />}
                       >
-                        Upgrade to Paid Plan - ₹999/month
+                        Upgrade to Paid Plan 
                       </Button>
                     )}
                   </div>
@@ -614,11 +618,11 @@ export const MyVehiclesPage: React.FC = () => {
                   {selectedVehicle.remainingTrialDays! <= 0 && (
                     <div className="mt-4 pt-4 border-t border-blue-200">
                       <Button
-                        onClick={() => handlePayment(selectedVehicle.id)}
+                        onClick={() => navigate('/payment')}
                         variant="secondary"
                         icon={<CreditCardIcon className="h-4 w-4" />}
                       >
-                        Upgrade to Paid Plan - ₹999/month
+                        Upgrade to Paid Plan 
                       </Button>
                     </div>
                   )}

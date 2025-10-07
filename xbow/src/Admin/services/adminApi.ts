@@ -113,8 +113,19 @@ reviewVehicleApplication: (applicationId: string, data: {
 // get xbow support requests and assign vehicles
 getXBOWLoads: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/xbow-loads`, { params }),
 findMatchedVehicles: (loadId: string) => adminApi.get(`${API_BASE_URL}/admin/find-matched-vehicles/${loadId}/xbow-support`),
-assignVehicleToLoad: (loadId: string, vehicleId: string) =>
-  adminApi.post(`${API_BASE_URL}/admin/assign-vehicle/${loadId}/xbow-support`, { vehicleId }),
+assignVehicleToLoad: (assignmentData: {
+  loadId: string;
+  vehicleId: string;
+  agreedPrice?: number;
+  vehicleOwnerId?: string;
+  loadProviderId?: string;
+  message?: string;
+}) =>
+  adminApi.post(
+    `${API_BASE_URL}/admin/assign-vehicle/${assignmentData.loadId}/xbow-support`,
+    assignmentData
+  )
+
 
 };
 
