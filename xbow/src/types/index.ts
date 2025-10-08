@@ -328,10 +328,45 @@ export interface VehicleApplication {
 
 export interface LoadAssignment {
   _id: string;
-  loadId: string;
-  vehicleId: string;
-  loadProviderId: string;
-  vehicleOwnerId: string;
+
+  // After population, this is an object
+  loadId: {
+    _id: string;
+    loadingLocation: string;
+    unloadingLocation: string;
+    loadingDate: string;
+    loadingTime: string;
+    materials: string;
+    vehicleRequirement: string;
+    status: string;
+    paymentTerms: string;
+    withXBowSupport?: boolean;
+    loadProviderName?: string;
+  };
+
+  vehicleId: {
+    _id: string;
+    vehicleNumber: string;
+    vehicleType: string;
+    vehicleSize: string;
+    photos?: string[];
+    ownerName: string;
+  };
+
+  loadProviderId: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+
+  vehicleOwnerId: {
+    _id: string;
+    name: string;
+    email: string;
+    phone: string;
+  };
+
   agreedPrice?: number;
   status: 'assigned' | 'in_progress' | 'delivered' | 'completed';
   startedAt?: string;
@@ -340,6 +375,7 @@ export interface LoadAssignment {
   createdAt: string;
   updatedAt: string;
 }
+
 
 export interface Rating {
   _id: string;

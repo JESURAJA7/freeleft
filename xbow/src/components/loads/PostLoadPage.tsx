@@ -24,6 +24,8 @@ import toast from 'react-hot-toast';
 import type { Material, MaterialPhoto, LocationData, Load } from '../../types/index';
 import { VehicleMatchingModal } from '../../screens/Bidding/VehicleMatchingModal';
 import { BiddingPage } from '../../screens/Bidding/BiddingPage';
+import { PincodeInput } from '../Pincode/PincodeInput';
+
 
 interface MaterialWithFiles extends Omit<Material, 'photos'> {
   photos: Array<{
@@ -66,7 +68,7 @@ export const PostLoadPage = () => {
   const [showBiddingPage, setShowBiddingPage] = useState(false);
   const [matchingVehicles, setMatchingVehicles] = useState(false);
   const [currentLoad, setCurrentLoad] = useState<Load | null>(null);
-    const [isGeocodingLoading, setIsGeocodingLoading] = useState<{
+  const [isGeocodingLoading, setIsGeocodingLoading] = useState<{
     loading: boolean;
     unloading: boolean;
   }>({ loading: false, unloading: false });
@@ -200,21 +202,26 @@ export const PostLoadPage = () => {
     }
   };
 
-  const handlePincodeChange = (locationType: 'loading' | 'unloading', value: string) => {
-    const locationKey = locationType === 'loading' ? 'loadingLocation' : 'unloadingLocation';
+const handlePincodeChange = (locationType: 'loading' | 'unloading', value: string) => {
+  const locationKey = locationType === 'loading' ? 'loadingLocation' : 'unloadingLocation';
 
-    setFormData(prev => ({
-      ...prev,
-      [locationKey]: {
-        ...prev[locationKey],
-        pincode: value
-      }
-    }));
-
-    if (value.length === 6) {
-      geocodePincode(value, locationType);
+  setFormData(prev => ({
+    ...prev,
+    [locationKey]: {
+      ...prev[locationKey],
+      pincode: value,
+      // Clear other fields when pincode changes
+      place: value.length === 6 ? prev[locationKey].place : '',
+      district: value.length === 6 ? prev[locationKey].district : '',
+      state: value.length === 6 ? prev[locationKey].state : ''
     }
-  };
+  }));
+
+  // Auto-geocode when 6 digits are entered (fallback)
+  if (value.length === 6) {
+    geocodePincode(value, locationType);
+  }
+};
 
 
 
@@ -663,151 +670,153 @@ export const PostLoadPage = () => {
         <form onSubmit={handleSubmit} className="space-y-8">
           {/* Locations */}
           <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200">
-                     <div className="flex items-center space-x-3 mb-6">
-                       <MapPin className="h-6 w-6 text-blue-600" />
-                       <h3 className="text-2xl font-bold text-slate-900">Loading Location</h3>
-                     </div>
-         
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <div className="md:col-span-2">
-                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                           Pincode *
-                         </label>
-                         <div className="relative">
-                           <input
-                             type="text"
-                             value={formData.loadingLocation.pincode}
-                             onChange={(e) => handlePincodeChange('loading', e.target.value)}
-                             placeholder="Enter 6-digit pincode"
-                             maxLength={6}
-                             className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                             required
-                           />
-                           {isGeocodingLoading.loading && (
-                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                               <div className="animate-spin h-5 w-5 border-2 border-blue-600 border-t-transparent rounded-full"></div>
-                             </div>
-                           )}
-                         </div>
-                       </div>
-         
-                       <div>
-                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                           Place *
-                         </label>
-                         <input
-                           type="text"
-                           value={formData.loadingLocation.place}
-                           onChange={(e) => handleLocationChange('loadingLocation', 'place', e.target.value)}
-                           placeholder="Place/City"
-                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                           required
-                         />
-                       </div>
-         
-                       <div>
-                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                           District *
-                         </label>
-                         <input
-                           type="text"
-                           value={formData.loadingLocation.district}
-                           onChange={(e) => handleLocationChange('loadingLocation', 'district', e.target.value)}
-                           placeholder="District"
-                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                           required
-                         />
-                       </div>
-         
-                       <div className="md:col-span-2">
-                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                           State *
-                         </label>
-                         <input
-                           type="text"
-                           value={formData.loadingLocation.state}
-                           onChange={(e) => handleLocationChange('loadingLocation', 'state', e.target.value)}
-                           placeholder="State"
-                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                           required
-                         />
-                       </div>
-                     </div>
-                   </div>
-         
-                   <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200">
-                     <div className="flex items-center space-x-3 mb-6">
-                       <MapPin className="h-6 w-6 text-green-600" />
-                       <h3 className="text-2xl font-bold text-slate-900">Unloading Location</h3>
-                     </div>
-         
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                       <div className="md:col-span-2">
-                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                           Pincode *
-                         </label>
-                         <div className="relative">
-                           <input
-                             type="text"
-                             value={formData.unloadingLocation.pincode}
-                             onChange={(e) => handlePincodeChange('unloading', e.target.value)}
-                             placeholder="Enter 6-digit pincode"
-                             maxLength={6}
-                             className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                             required
-                           />
-                           {isGeocodingLoading.unloading && (
-                             <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                               <div className="animate-spin h-5 w-5 border-2 border-green-600 border-t-transparent rounded-full"></div>
-                             </div>
-                           )}
-                         </div>
-                       </div>
-         
-                       <div>
-                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                           Place *
-                         </label>
-                         <input
-                           type="text"
-                           value={formData.unloadingLocation.place}
-                           onChange={(e) => handleLocationChange('unloadingLocation', 'place', e.target.value)}
-                           placeholder="Place/City"
-                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                           required
-                         />
-                       </div>
-         
-                       <div>
-                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                           District *
-                         </label>
-                         <input
-                           type="text"
-                           value={formData.unloadingLocation.district}
-                           onChange={(e) => handleLocationChange('unloadingLocation', 'district', e.target.value)}
-                           placeholder="District"
-                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                           required
-                         />
-                       </div>
-         
-                       <div className="md:col-span-2">
-                         <label className="block text-sm font-semibold text-slate-700 mb-2">
-                           State *
-                         </label>
-                         <input
-                           type="text"
-                           value={formData.unloadingLocation.state}
-                           onChange={(e) => handleLocationChange('unloadingLocation', 'state', e.target.value)}
-                           placeholder="State"
-                           className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
-                           required
-                         />
-                       </div>
-                     </div>
-                   </div>
-         
+            <div className="flex items-center space-x-3 mb-6">
+              <MapPin className="h-6 w-6 text-blue-600" />
+              <h3 className="text-2xl font-bold text-slate-900">Loading Location</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Loading Location Pincode */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Pincode *
+                </label>
+                <PincodeInput
+                  value={formData.loadingLocation.pincode}
+                  onChange={(value) => handlePincodeChange('loading', value)}
+                  onLocationData={(locationData) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      loadingLocation: {
+                        ...prev.loadingLocation,
+                        ...locationData
+                      }
+                    }));
+                  }}
+                  placeholder="Enter 6-digit pincode"
+                  required
+                  loading={isGeocodingLoading.loading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Place *
+                </label>
+                <input
+                  type="text"
+                  value={formData.loadingLocation.place}
+                  onChange={(e) => handleLocationChange('loadingLocation', 'place', e.target.value)}
+                  placeholder="Place/City"
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  District *
+                </label>
+                <input
+                  type="text"
+                  value={formData.loadingLocation.district}
+                  onChange={(e) => handleLocationChange('loadingLocation', 'district', e.target.value)}
+                  placeholder="District"
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  State *
+                </label>
+                <input
+                  type="text"
+                  value={formData.loadingLocation.state}
+                  onChange={(e) => handleLocationChange('loadingLocation', 'state', e.target.value)}
+                  placeholder="State"
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-white rounded-xl shadow-lg p-8 border border-slate-200">
+            <div className="flex items-center space-x-3 mb-6">
+              <MapPin className="h-6 w-6 text-green-600" />
+              <h3 className="text-2xl font-bold text-slate-900">Unloading Location</h3>
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              {/* Unloading Location Pincode */}
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Pincode *
+                </label>
+                <PincodeInput
+                  value={formData.unloadingLocation.pincode}
+                  onChange={(value) => handlePincodeChange('unloading', value)}
+                  onLocationData={(locationData) => {
+                    setFormData(prev => ({
+                      ...prev,
+                      unloadingLocation: {
+                        ...prev.unloadingLocation,
+                        ...locationData
+                      }
+                    }));
+                  }}
+                  placeholder="Enter 6-digit pincode"
+                  required
+                  loading={isGeocodingLoading.unloading}
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  Place *
+                </label>
+                <input
+                  type="text"
+                  value={formData.unloadingLocation.place}
+                  onChange={(e) => handleLocationChange('unloadingLocation', 'place', e.target.value)}
+                  placeholder="Place/City"
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  required
+                />
+              </div>
+
+              <div>
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  District *
+                </label>
+                <input
+                  type="text"
+                  value={formData.unloadingLocation.district}
+                  onChange={(e) => handleLocationChange('unloadingLocation', 'district', e.target.value)}
+                  placeholder="District"
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  required
+                />
+              </div>
+
+              <div className="md:col-span-2">
+                <label className="block text-sm font-semibold text-slate-700 mb-2">
+                  State *
+                </label>
+                <input
+                  type="text"
+                  value={formData.unloadingLocation.state}
+                  onChange={(e) => handleLocationChange('unloadingLocation', 'state', e.target.value)}
+                  placeholder="State"
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-lg focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-200 transition-all"
+                  required
+                />
+              </div>
+            </div>
+          </div>
+
           {/* Route Preview */}
           {hasValidCoordinates(formData.loadingLocation) && hasValidCoordinates(formData.unloadingLocation) && (
             <motion.div

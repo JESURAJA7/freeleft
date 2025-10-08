@@ -26,25 +26,25 @@ import { Button } from '../../components/common/CustomButton';
 import { Modal } from '../../components/common/Modal';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { loadAPI, vehicleAPI, loadAssignmentAPI } from '../../services/api';
-import type { Load, Vehicle } from '../../types';
+import type { Load, Vehicle , LoadAssignment } from '../../types';
 import toast from 'react-hot-toast';
 
-interface LoadAssignment {
-  _id: string;
-  loadId: Load;
-  vehicleId: Vehicle;
-  loadProviderId: string;
-  vehicleOwnerId: string;
-  applicationId?: string;
-  agreedPrice: number;
-  status: 'assigned' | 'enroute' | 'delivered' | 'completed';
-  startedAt?: Date;
-  deliveredAt?: Date;
-  completedAt?: Date;
-  notes?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
+// interface LoadAssignment {
+//     _id: string;
+//     loadId: Load;
+//     vehicleId: Vehicle;
+//     loadProviderId: string;
+//     vehicleOwnerId: string;
+//     applicationId?: string;
+//     agreedPrice: number;
+//     status: 'assigned' | 'enroute' | 'delivered' | 'completed';
+//     startedAt?: Date;
+//     deliveredAt?: Date;
+//     completedAt?: Date;
+//     notes?: string;
+//     createdAt: Date;
+//     updatedAt: Date;
+// }
 
 export const LoadProgressPage: React.FC = () => {
     const { loadId } = useParams<{ loadId: string }>();
@@ -283,7 +283,7 @@ export const LoadProgressPage: React.FC = () => {
                                     <div className="flex items-center space-x-2">
                                         <DollarSign className="h-4 w-4 text-green-700" />
                                         <span className="font-medium text-green-800">
-                                            ₹{currentAssignment.agreedPrice.toLocaleString()}
+                                            ₹{(currentAssignment.agreedPrice ?? 0).toLocaleString()}
                                         </span>
                                     </div>
                                 </div>
@@ -444,14 +444,25 @@ export const LoadProgressPage: React.FC = () => {
                                 </div>
                                 <div>
                                     <h4 className="font-semibold text-slate-900">
-                                        {user?.role === 'load_provider' 
-                                            ? (currentAssignment?.vehicleId?.ownerName || 'Vehicle Owner')
+                                        {user?.role === 'load_provider'
+                                            ? (currentAssignment?.vehicleOwnerId.name || 'Vehicle Owner')
                                             : currentLoad.loadProviderName
                                         }
                                     </h4>
                                     <p className="text-sm text-slate-600">
                                         {user?.role === 'load_provider' ? 'Vehicle Owner' : 'Load Provider'}
                                     </p>
+                                  
+                                    <div className="flex items-center space-x-2 text-sm text-slate-500 mt-1">
+                                        <Mail className="h-4 w-4" />
+                                        <span>
+                                            {user?.role === 'load_provider'
+                                                ? `${currentAssignment?.vehicleOwnerId.email|| 'N/A'}${currentAssignment?.vehicleOwnerId.phone ? `, ` : ''}`
+                                                : currentLoad.loadProviderName
+                                            }
+                                        </span>
+
+                                    </div>
                                 </div>
                             </div>
 
@@ -499,7 +510,7 @@ export const LoadProgressPage: React.FC = () => {
                                 <div className="flex items-center space-x-3 mb-4">
                                     {currentAssignment.vehicleId.photos && currentAssignment.vehicleId.photos.length > 0 ? (
                                         <img
-                                            src={currentAssignment.vehicleId.photos[0]?.url}
+                                            src={currentAssignment.vehicleId.photos[0]}
                                             alt={`Vehicle ${currentAssignment.vehicleId.vehicleNumber}`}
                                             className="h-12 w-12 rounded-full object-cover"
                                         />
