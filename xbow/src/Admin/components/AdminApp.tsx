@@ -8,6 +8,7 @@ import { CommissionManagement } from './CommissionManagement';
 import { PODManagementPage } from './PODManagementPage';
 import { AdminApplicationsPage } from './AdminApplicationsPage';
 import { XBOWSupportPage } from './XBOWSupportPage';
+import { WithoutXBOWSupport } from './WithoutXBOWSupport';
 
 export const AdminApp: React.FC = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
@@ -29,6 +30,8 @@ export const AdminApp: React.FC = () => {
         return <CommissionManagement />;
       case 'loadApplications':
         return <AdminApplicationsPage/>;
+        case 'withoutXbowSupport':
+        return <WithoutXBOWSupport />;
       default:
         return <AdminDashboard />;
     }

@@ -30,6 +30,7 @@ const menuItems = [
   { id: 'users', label: 'User Management', icon: UsersIcon, href: '/admin/users' },
   { id: 'vehicles', label: 'Vehicle Management', icon: TruckIcon, href: '/admin/vehicles' },
   { id: 'XbowSupport', label: 'Xbow Support', icon: LinkIcon, href: '/admin/xbow_support' },
+  { id: 'withoutXbowSupport', label: 'Without Xbow Support', icon: LinkIcon, href: '/admin/without_xbow_support' },
   { id: 'loadApplications', label: 'Load Applications', icon: DocumentTextIcon, href: '/admin/load-applications' },
 ];
 

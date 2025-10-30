@@ -14,7 +14,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { Button } from '../../components/common/CustomButton';
 import { Input } from '../../components/common/CustomInput';
 import toast from 'react-hot-toast';
-import logo from '../../assets/WhatsApp Image 2025-09-08 at 00.16.58_e20dd409.jpg';
+import logo from '../../assets/FLlogo.jpg';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -158,7 +158,7 @@ export const LoginPage: React.FC = () => {
             </Button>
           </form>
 
-          <div className="mt-6">
+          {/* <div className="mt-6">
             <Button
               onClick={() => setShowDemoModal(true)}
               fullWidth
@@ -168,7 +168,7 @@ export const LoginPage: React.FC = () => {
             >
               Use Demo Account
             </Button>
-          </div>
+          </div> */}
 
           <div className="mt-8 text-center">
             <p className="text-slate-600">
@@ -198,7 +198,7 @@ export const LoginPage: React.FC = () => {
       </div>
 
       {/* Demo Account Selection Modal */}
-      <AnimatePresence>
+      {/* <AnimatePresence>
         {showDemoModal && (
           <motion.div
             initial={{ opacity: 0 }}
@@ -255,7 +255,7 @@ export const LoginPage: React.FC = () => {
             </motion.div>
           </motion.div>
         )}
-      </AnimatePresence>
+      </AnimatePresence> */}
     </div>
   );
 };

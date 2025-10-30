@@ -30,6 +30,7 @@ import {
   getXbowLoads,
   findMatchedVehicles,
   assignVehicleToLoad,
+  getWithoutXbowLoads
   
 } from "../controllers/adminController.js";
 import { protect, authorize } from "../middleware/auth.js";
@@ -101,5 +102,8 @@ router.patch(
 router.get('/xbow-loads', getXbowLoads);
 router.get('/find-matched-vehicles/:loadId/xbow-support', findMatchedVehicles);
 router.post('/assign-vehicle/:loadId/xbow-support', assignVehicleToLoad);
+
+// Loads without Xbow Support
+router.get('/loads-without-xbow-support', getWithoutXbowLoads);
 
 export default router;

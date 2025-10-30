@@ -1366,6 +1366,34 @@ export const assignVehicleToLoad = async (req, res) => {
   }
 };
 
+//get without xbow loads
+export const getWithoutXbowLoads = async (req, res) => {
+  try {
+    const { status, page = 1, limit = 10 } = req.query;
+    let query = { withXBowSupport: false };
+    if (status) query.status = status;
+    const loads = await Load.find(query)
+      .populate('loadProviderId', 'name email phone companyName')
+      .populate('assignedVehicleId', 'vehicleNumber ownerName')
+      .sort({ createdAt: -1 })
+      .limit(limit * 1)
+      .skip((page - 1) * limit);
+    const total = await Load.countDocuments(query);
+    res.status(200).json({
+      success: true,
+      count: loads.length,
+      total,
+      data: loads
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
+
+
 
 export default {
   getDashboardStats,

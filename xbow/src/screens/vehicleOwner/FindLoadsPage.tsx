@@ -325,18 +325,17 @@ export const FindLoadsPage: React.FC = () => {
               onChange={(e) => updateFilter('vehicleType', e.target.value)}
               className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none"
             >
-              <option value="">All Vehicle Types</option>
-              <option value="2-wheel">2-wheel</option>
-              <option value="3-wheel">3-wheel</option>
-              <option value="4-wheel">4-wheel</option>
-              <option value="6-wheel">6-wheel</option>
-              <option value="8-wheel">8-wheel</option>
-              <option value="10-wheel">10-wheel</option>
-              <option value="12-wheel">12-wheel</option>
-              <option value="14-wheel">14-wheel</option>
-              <option value="16-wheel">16-wheel</option>
-              <option value="18-wheel">18-wheel</option>
-              <option value="20-wheel">20-wheel</option>
+                 <option value="2-wheel">🏍️  2-wheeler Bike</option>
+                  <option value="3-wheel">🛺  3-wheeler Auto</option>
+                  <option value="4-wheel">🚚  4-wheeler Pickup / Dost / Tata Ace</option>
+                  <option value="6-wheel">🚛  6-wheeler Eicher / Canter / JCB</option>
+                  <option value="trailer">🛻  Trailer / Open Truck / Crane</option>
+                  <option value="10-wheel">🚛  10-wheeler Lorry</option>
+                  <option value="12-wheel">🚛  12-wheeler Lorry</option>
+                  <option value="14-wheel">🚛  14-wheeler Lorry</option>
+                  <option value="16-wheel">🚛  16-wheeler Lorry</option>
+                  <option value="18-wheel">🚛  18-wheeler Lorry</option>
+                  <option value="20-wheel">🚛  20-wheeler Lorry</option>
             </select>
 
             <select
@@ -350,7 +349,7 @@ export const FindLoadsPage: React.FC = () => {
               ))}
             </select>
 
-            <select
+            {/* <select
               value={filters.trailerType}
               onChange={(e) => updateFilter('trailerType', e.target.value)}
               className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-emerald-500 focus:outline-none"
@@ -365,7 +364,7 @@ export const FindLoadsPage: React.FC = () => {
               <option value="crane-50t">Crane (50T)</option>
               <option value="crane-100t">Crane (100T)</option>
               <option value="crane-200t">Crane (200T)</option>
-            </select>
+            </select> */}
 
             <select
               value={filters.paymentTerms}

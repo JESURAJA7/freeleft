@@ -202,26 +202,26 @@ export const PostLoadPage = () => {
     }
   };
 
-const handlePincodeChange = (locationType: 'loading' | 'unloading', value: string) => {
-  const locationKey = locationType === 'loading' ? 'loadingLocation' : 'unloadingLocation';
+  const handlePincodeChange = (locationType: 'loading' | 'unloading', value: string) => {
+    const locationKey = locationType === 'loading' ? 'loadingLocation' : 'unloadingLocation';
 
-  setFormData(prev => ({
-    ...prev,
-    [locationKey]: {
-      ...prev[locationKey],
-      pincode: value,
-      // Clear other fields when pincode changes
-      place: value.length === 6 ? prev[locationKey].place : '',
-      district: value.length === 6 ? prev[locationKey].district : '',
-      state: value.length === 6 ? prev[locationKey].state : ''
+    setFormData(prev => ({
+      ...prev,
+      [locationKey]: {
+        ...prev[locationKey],
+        pincode: value,
+        // Clear other fields when pincode changes
+        place: value.length === 6 ? prev[locationKey].place : '',
+        district: value.length === 6 ? prev[locationKey].district : '',
+        state: value.length === 6 ? prev[locationKey].state : ''
+      }
+    }));
+
+    // Auto-geocode when 6 digits are entered (fallback)
+    if (value.length === 6) {
+      geocodePincode(value, locationType);
     }
-  }));
-
-  // Auto-geocode when 6 digits are entered (fallback)
-  if (value.length === 6) {
-    geocodePincode(value, locationType);
-  }
-};
+  };
 
 
 
@@ -503,36 +503,36 @@ const handlePincodeChange = (locationType: 'loading' | 'unloading', value: strin
     return true;
   };
 
-  const handleMatchVehicles = async () => {
-    if (!currentLoad || !isValidObjectId(currentLoad._id)) {
-      toast.error('Please save the load first to match vehicles');
-      return;
-    }
+  // const handleMatchVehicles = async () => {
+  //   if (!currentLoad || !isValidObjectId(currentLoad._id)) {
+  //     toast.error('Please save the load first to match vehicles');
+  //     return;
+  //   }
 
-    setMatchingVehicles(true);
-    try {
-      const response = await fetch(`${import.meta.env.VITE_API_URL}/vehicles/matchVehicles/${currentLoad._id}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
-        }
-      });
+  //   setMatchingVehicles(true);
+  //   try {
+  //     const response = await fetch(`${import.meta.env.VITE_API_URL}/vehicles/matchVehicles/${currentLoad._id}`, {
+  //       method: 'GET',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //         'Authorization': `Bearer ${localStorage.getItem('token')}`
+  //       }
+  //     });
 
-      if (response.ok) {
-        const data = await response.json();
-        toast.success(`Found ${data.vehicleCount} matching vehicles!`);
-        setShowBiddingPage(true);
-      } else {
-        throw new Error('Failed to match vehicles');
-      }
-    } catch (error) {
-      console.error('Error matching vehicles:', error);
-      toast.error('Failed to match vehicles');
-    } finally {
-      setMatchingVehicles(false);
-    }
-  };
+  //     if (response.ok) {
+  //       const data = await response.json();
+  //       toast.success(`Found ${data.vehicleCount} matching vehicles!`);
+  //       setShowBiddingPage(true);
+  //     } else {
+  //       throw new Error('Failed to match vehicles');
+  //     }
+  //   } catch (error) {
+  //     console.error('Error matching vehicles:', error);
+  //     toast.error('Failed to match vehicles');
+  //   } finally {
+  //     setMatchingVehicles(false);
+  //   }
+  // };
 
   const handleVehicleSelect = (vehicleId: string) => {
     toast.success('Vehicle assigned successfully!');

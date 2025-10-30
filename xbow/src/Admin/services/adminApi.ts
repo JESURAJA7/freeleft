@@ -39,10 +39,10 @@ adminApi.interceptors.response.use(
       Cookies.remove('xbow_admin_user');
       window.location.href = '/admin/login';
     }
-    
+
     const message = error.response?.data?.message || 'Something went wrong';
     toast.error(message);
-    
+
     return Promise.reject(error);
   }
 );
@@ -51,12 +51,12 @@ export const adminAPI = {
   // Auth
   login: (credentials: any) => adminApi.post(`${API_BASE_URL}/admin/login`, credentials),
   register: (adminData: any) => adminApi.post(`${API_BASE_URL}/admin/register`, adminData),
-  
+
   // Profile Management
   getProfile: () => adminApi.get(`${API_BASE_URL}/admin/profile`),
   updateProfile: (data: any) => adminApi.put(`${API_BASE_URL}/admin/profile`, data),
   changePassword: (data: any) => adminApi.put(`${API_BASE_URL}/admin/change-password`, data),
-  
+
   // Dashboard
   getDashboardStats: () => adminApi.get(`${API_BASE_URL}/admin/dashboard`),
 
@@ -65,7 +65,7 @@ export const adminAPI = {
   approveUser: (userId: string, data: any) => adminApi.put(`${API_BASE_URL}/admin/users/${userId}/approve`, data),
   rejectUser: (userId: string, data: any) => adminApi.put(`${API_BASE_URL}/admin/users/${userId}/reject`, data),
   toggleUserAccess: (userId: string) => adminApi.put(`${API_BASE_URL}/admin/users/${userId}/toggle-access`),
-   updateUserLimits: (userId: string, data: { maxLoadsAllowed?: number; trialDays?: number }) =>
+  updateUserLimits: (userId: string, data: { maxLoadsAllowed?: number; trialDays?: number }) =>
     adminApi.patch(`${API_BASE_URL}/admin/users/${userId}/limits`, data),
 
   // Load Management
@@ -76,8 +76,8 @@ export const adminAPI = {
   getVehicles: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/vehicles`, { params }),
   approveVehicle: (vehicleId: string) => adminApi.put(`${API_BASE_URL}/admin/vehicles/${vehicleId}/approve`),
   rejectVehicle: (vehicleId: string, data: any) => adminApi.put(`${API_BASE_URL}/admin/vehicles/${vehicleId}/reject`, data),
-   updateVehicleLimits: (vehicleId: string, data: { maxLoadsAllowed: number }) =>
-   adminApi.patch(`${API_BASE_URL}/admin/vehicles/${vehicleId}/limits`, data),
+  updateVehicleLimits: (vehicleId: string, data: { maxLoadsAllowed: number }) =>
+    adminApi.patch(`${API_BASE_URL}/admin/vehicles/${vehicleId}/limits`, data),
 
   // POD Management
   getPODs: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/pods`, { params }),
@@ -99,35 +99,38 @@ export const adminAPI = {
     adminApi.get(`${API_BASE_URL}/admin/reports/${type}`, { params }),
 
 
-// Vehicle Application Management
+  // Vehicle Application Management
   getVehicleApplications: () => adminApi.get(`${API_BASE_URL}/admin/vehicle-applications`),
-reviewVehicleApplication: (applicationId: string, data: {
-  action: 'approve' | 'reject';
-  adjustedPrice?: number;
-  comments?: string;
-}) => adminApi.patch(
-  `${API_BASE_URL}/admin/vehicle-applications/${applicationId}/review`, // relative URL works with baseURL
-  data
-),
+  reviewVehicleApplication: (applicationId: string, data: {
+    action: 'approve' | 'reject';
+    adjustedPrice?: number;
+    comments?: string;
+  }) => adminApi.patch(
+    `${API_BASE_URL}/admin/vehicle-applications/${applicationId}/review`, // relative URL works with baseURL
+    data
+  ),
 
-// get xbow support requests and assign vehicles
-getXBOWLoads: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/xbow-loads`, { params }),
-findMatchedVehicles: (loadId: string) => adminApi.get(`${API_BASE_URL}/admin/find-matched-vehicles/${loadId}/xbow-support`),
-assignVehicleToLoad: (assignmentData: {
-  loadId: string;
-  vehicleId: string;
-  agreedPrice?: number;
-  vehicleOwnerId?: string;
-  loadProviderId?: string;
-  message?: string;
-}) =>
-  adminApi.post(
-    `${API_BASE_URL}/admin/assign-vehicle/${assignmentData.loadId}/xbow-support`,
-    assignmentData
-  )
+  // get xbow support requests and assign vehicles
+  getXBOWLoads: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/xbow-loads`, { params }),
+  findMatchedVehicles: (loadId: string) => adminApi.get(`${API_BASE_URL}/admin/find-matched-vehicles/${loadId}/xbow-support`),
+  assignVehicleToLoad: (assignmentData: {
+    loadId: string;
+    vehicleId: string;
+    agreedPrice?: number;
+    vehicleOwnerId?: string;
+    loadProviderId?: string;
+    message?: string;
+  }) =>
+    adminApi.post(
+      `${API_BASE_URL}/admin/assign-vehicle/${assignmentData.loadId}/xbow-support`,
+      assignmentData
+    ),
 
-
+  //without xbow support
+  getLoadsWithoutXBOWSupport: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/loads-without-xbow-support`, { params }),
 };
+
+
 
 
 
