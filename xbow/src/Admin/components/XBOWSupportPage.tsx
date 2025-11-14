@@ -26,44 +26,15 @@ import {
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Load, Vehicle } from '../../types/index';
+import type { Load, Vehicle, User } from '../../types/index';
 import { Button } from '../../components/common/CustomButton';
 import { Input } from '../../components/common/CustomInput';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Modal } from '../../components/common/Modal';
 import { adminAPI } from '../services/adminApi';
+import { usePagination } from '../../hooks/usePagination';
+import { Pagination } from './common/Pagination'; // Add this import
 import toast from 'react-hot-toast';
-
-// interface Vehicle {
-//   _id: string;
-//   vehicleNumber: string;
-//   vehicleType: string;
-//   vehicleSize: number;
-//   passingLimit: number;
-//   ownerName: string;
-//   ownerPhone: string;
-//   ownerEmail: string;
-//   currentLocation: {
-//     place: string;
-//     state: string;
-//     coordinates?: {
-//       latitude: number;
-//       longitude: number;
-//     };
-//   };
-//   status: 'available' | 'busy' | 'maintenance';
-//   rating: number;
-//   completedTrips: number;
-//   isVerified: boolean;
-//   documents: {
-//     rc: { verified: boolean };
-//     insurance: { verified: boolean };
-//     permit: { verified: boolean };
-//   };
-//   lastActive: string;
-//   estimatedPrice: number;
-//   distance: number;
-// }
 
 export const XBOWSupportPage: React.FC = () => {
   const { user } = useAuth();
@@ -83,12 +54,25 @@ export const XBOWSupportPage: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [assignmentMessage, setAssignmentMessage] = useState('');
 
+  // Add pagination hook
+  const {
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    paginatedItems,
+    handlePageChange,
+    handleItemsPerPageChange,
+    resetPagination,
+    totalItems,
+  } = usePagination({ items: filteredLoads, initialItemsPerPage: 10 });
+
   useEffect(() => {
     fetchXBOWLoads();
   }, []);
 
   useEffect(() => {
     filterLoads();
+    resetPagination();
   }, [loads, searchTerm, statusFilter, priorityFilter]);
 
   const fetchXBOWLoads = async () => {
@@ -173,49 +157,49 @@ export const XBOWSupportPage: React.FC = () => {
   };
 
   const assignVehicleToLoad = async () => {
-  if (!selectedLoad || !selectedVehicle) return;
+    if (!selectedLoad || !selectedVehicle) return;
 
-  try {
-    setAssigningLoading(true);
-    
-    // Prepare the required data
-    const assignmentData = {
-      loadId: selectedLoad._id,
-      vehicleId: selectedVehicle._id,
-      agreedPrice: selectedVehicle.bidPrice , // Use bidPrice or fallback
-      vehicleOwnerId: selectedVehicle.ownerId , // Check both possible field names
-      loadProviderId: selectedLoad.loadProviderId , // Check both possible field names
-      message: assignmentMessage
-    };
+    try {
+      setAssigningLoading(true);
 
-    const response = await adminAPI.assignVehicleToLoad(assignmentData);
+      // Prepare the required data
+      const assignmentData = {
+        loadId: selectedLoad._id,
+        vehicleId: selectedVehicle._id,
+        agreedPrice: selectedVehicle.bidPrice || 0, // Use bidPrice or fallback
+        vehicleOwnerId: selectedVehicle.ownerId || selectedVehicle.ownerId, // Check both possible field names
+        loadProviderId: typeof selectedLoad.loadProviderId === 'string' ? selectedLoad.loadProviderId : selectedLoad.loadProviderId?.id, // Handle User object or string
+        message: assignmentMessage,
+      };
 
-    if (response.data.success) {
-      toast.success('Vehicle assigned successfully!');
-      setLoads(prevLoads =>
-        prevLoads.map(load =>
-          load._id === selectedLoad._id
-            ? { 
-                ...load, 
-                status: 'assigned', 
+      const response = await adminAPI.assignVehicleToLoad(assignmentData);
+
+      if (response.data.success) {
+        toast.success('Vehicle assigned successfully!');
+        setLoads(prevLoads =>
+          prevLoads.map(load =>
+            load._id === selectedLoad._id
+              ? {
+                ...load,
+                status: 'assigned',
                 assignedVehicleId: selectedVehicle._id,
                 agreedPrice: assignmentData.agreedPrice
               }
-            : load
-        )
-      );
-      setIsAssignVehicleModalOpen(false);
-      setIsVehicleMatchingModalOpen(false);
-      setAssignmentMessage('');
-      setSelectedVehicle(null);
+              : load
+          )
+        );
+        setIsAssignVehicleModalOpen(false);
+        setIsVehicleMatchingModalOpen(false);
+        setAssignmentMessage('');
+        setSelectedVehicle(null);
+      }
+    } catch (error: any) {
+      console.error('Error assigning vehicle:', error);
+      toast.error('Failed to assign vehicle');
+    } finally {
+      setAssigningLoading(false);
     }
-  } catch (error: any) {
-    console.error('Error assigning vehicle:', error);
-    toast.error('Failed to assign vehicle');
-  } finally {
-    setAssigningLoading(false);
-  }
-};
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -405,15 +389,15 @@ export const XBOWSupportPage: React.FC = () => {
           })}
         </motion.div>
 
-        {/* Loads Grid */}
+        {/* Loads Grid - Use paginatedItems instead of filteredLoads */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
         >
           <AnimatePresence>
-            {filteredLoads.map((load, index) => {
+            {paginatedItems.map((load, index) => {
               const StatusIcon = getStatusIcon(load.status);
               const totalWeight = load.materials?.reduce((sum, material) => sum + material.totalWeight, 0) || 0;
               const priorityLabel = getPriorityLabel(load.loadingDate);
@@ -567,6 +551,16 @@ export const XBOWSupportPage: React.FC = () => {
           </AnimatePresence>
         </motion.div>
 
+        {/* Add Pagination Component */}
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+        />
+
         {/* Empty State */}
         {filteredLoads.length === 0 && !loading && (
           <motion.div
@@ -587,7 +581,7 @@ export const XBOWSupportPage: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Load Details Modal */}
+        {/* Rest of your modals remain the same */}
         <Modal
           isOpen={isLoadDetailsModalOpen}
           onClose={() => setIsLoadDetailsModalOpen(false)}
@@ -601,16 +595,56 @@ export const XBOWSupportPage: React.FC = () => {
                 <h3 className="text-lg font-bold text-blue-900 mb-4">Load Provider Information</h3>
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
-                    <span className="text-blue-700 font-medium">Company:</span>
-                    <p className="text-slate-900">{selectedLoad.loadProviderName}</p>
+                    <span className="text-blue-700 font-medium">Load ID:</span>
+                    <p className="text-slate-900 font-mono">#{selectedLoad._id.slice(-8).toUpperCase()}</p>
                   </div>
                   <div>
-                    <span className="text-blue-700 font-medium">Load ID:</span>
-                    <p className="text-slate-900">#{selectedLoad._id.slice(-6).toUpperCase()}</p>
+                    <span className="text-blue-700 font-medium">Company:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).companyName
+                        : selectedLoad.loadProviderName}
+                    </p>
                   </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Contact Name:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).name
+                        : selectedLoad.loadProviderName}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Phone Number:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).phone
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">WhatsApp Number:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).whatsappNumber
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Email:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).email
+                        : 'N/A'}
+                    </p>
+                  </div>
+
                   <div>
                     <span className="text-blue-700 font-medium">Created:</span>
-                    <p className="text-slate-900">{new Date(selectedLoad.createdAt).toLocaleDateString()}</p>
+                    <p className="text-slate-900">
+                      {new Date(selectedLoad.createdAt).toLocaleString()}
+                    </p>
+
                   </div>
                   <div>
                     <span className="text-blue-700 font-medium">Status:</span>
@@ -717,8 +751,8 @@ export const XBOWSupportPage: React.FC = () => {
                     <div
                       key={vehicle._id}
                       className={`border-2 rounded-xl p-4 cursor-pointer transition-all ${selectedVehicle?._id === vehicle._id
-                          ? 'border-purple-500 bg-purple-50'
-                          : 'border-slate-200 hover:border-slate-300'
+                        ? 'border-purple-500 bg-purple-50'
+                        : 'border-slate-200 hover:border-slate-300'
                         }`}
                       onClick={() => setSelectedVehicle(vehicle)}
                     >
@@ -772,8 +806,8 @@ export const XBOWSupportPage: React.FC = () => {
                           <span className="text-slate-600 text-sm">Status:</span>
                           <span
                             className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${vehicle.status === 'available'
-                                ? 'bg-green-100 text-green-700'
-                                : 'bg-yellow-100 text-yellow-700'
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-yellow-100 text-yellow-700'
                               }`}
                           >
                             {vehicle.status}
@@ -820,61 +854,62 @@ export const XBOWSupportPage: React.FC = () => {
             </div>
           )}
         </Modal>
+
         {/* Assign Vehicle Modal */}
-<Modal
-  isOpen={isAssignVehicleModalOpen}
-  onClose={() => setIsAssignVehicleModalOpen(false)}
-  title="Assign Vehicle"
-  size="md"
->
-  {selectedVehicle && selectedLoad && (
-    <div className="space-y-6">
-      <div className="bg-green-50 border border-green-200 rounded-xl p-4">
-        <h3 className="font-semibold text-green-800 mb-2">Assignment Confirmation</h3>
-        <p className="text-green-700">
-          Assign <strong>{selectedVehicle.vehicleNumber}</strong> to load from{' '}
-          <strong>{selectedLoad.loadingLocation.place}</strong> to{' '}
-          <strong>{selectedLoad.unloadingLocation.place}</strong>
-        </p>
-        {/* FIXED LINE - Added safe handling for undefined bidPrice */}
-        <p className="text-sm text-green-600 mt-2">
-          Estimated Price: ₹{(selectedVehicle.bidPrice || 0).toLocaleString()}
-        </p>
-      </div>
-
-      <div>
-        <label className="block text-sm font-medium text-slate-700 mb-2">
-          Message to Vehicle Owner (Optional)
-        </label>
-        <textarea
-          value={assignmentMessage}
-          onChange={(e) => setAssignmentMessage(e.target.value)}
-          placeholder="Add any special instructions or information..."
-          rows={4}
-          className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-purple-500 focus:outline-none resize-none"
-        />
-      </div>
-
-      <div className="flex space-x-4">
-        <Button
-          onClick={() => setIsAssignVehicleModalOpen(false)}
-          variant="outline"
-          className="flex-1"
+        <Modal
+          isOpen={isAssignVehicleModalOpen}
+          onClose={() => setIsAssignVehicleModalOpen(false)}
+          title="Assign Vehicle"
+          size="md"
         >
-          Cancel
-        </Button>
-        <Button
-          onClick={assignVehicleToLoad}
-          loading={assigningLoading}
-          className="flex-1 bg-purple-600 hover:bg-purple-700"
-          icon={<CheckCircleIcon className="h-4 w-4" />}
-        >
-          Confirm Assignment
-        </Button>
-      </div>
-    </div>
-  )}
-</Modal>
+          {selectedVehicle && selectedLoad && (
+            <div className="space-y-6">
+              <div className="bg-green-50 border border-green-200 rounded-xl p-4">
+                <h3 className="font-semibold text-green-800 mb-2">Assignment Confirmation</h3>
+                <p className="text-green-700">
+                  Assign <strong>{selectedVehicle.vehicleNumber}</strong> to load from{' '}
+                  <strong>{selectedLoad.loadingLocation.place}</strong> to{' '}
+                  <strong>{selectedLoad.unloadingLocation.place}</strong>
+                </p>
+                {/* FIXED LINE - Added safe handling for undefined bidPrice */}
+                <p className="text-sm text-green-600 mt-2">
+                  Estimated Price: ₹{(selectedVehicle.bidPrice || 0).toLocaleString()}
+                </p>
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-slate-700 mb-2">
+                  Message to Vehicle Owner (Optional)
+                </label>
+                <textarea
+                  value={assignmentMessage}
+                  onChange={(e) => setAssignmentMessage(e.target.value)}
+                  placeholder="Add any special instructions or information..."
+                  rows={4}
+                  className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-purple-500 focus:outline-none resize-none"
+                />
+              </div>
+
+              <div className="flex space-x-4">
+                <Button
+                  onClick={() => setIsAssignVehicleModalOpen(false)}
+                  variant="outline"
+                  className="flex-1"
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={assignVehicleToLoad}
+                  loading={assigningLoading}
+                  className="flex-1 bg-purple-600 hover:bg-purple-700"
+                  icon={<CheckCircleIcon className="h-4 w-4" />}
+                >
+                  Confirm Assignment
+                </Button>
+              </div>
+            </div>
+          )}
+        </Modal>
       </div>
     </div>
   );

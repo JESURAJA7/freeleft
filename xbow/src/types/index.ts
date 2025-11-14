@@ -70,7 +70,7 @@ export interface User {
   subscriptionEndDate?: string;
   trialDays?: number;
   companyName?: string;
-
+  whatsappNumber?: string;
   totalLoadsPosted?: number;
   totalVehicles?: number;
   preferredOperatingState?: string;
@@ -82,7 +82,7 @@ export interface User {
 export interface Load {
   _id: string; 
   loadId: string; // Unique load identifier (could be same as _id)
-  loadProviderId: string;
+  loadProviderId: string | User;
   loadProviderName: string;
   title?: string;
   description?: string;
@@ -468,3 +468,10 @@ export interface MatchedVehicle extends Vehicle {
   isRequested?: boolean;
   requestStatus?: 'pending' | 'accepted' | 'rejected';
 }
+
+
+// Type guard to check if loadProviderId is a User object
+const isUserObject = (loadProviderId: string | User): loadProviderId is User => {
+  return typeof loadProviderId === 'object' && loadProviderId !== null;
+};
+

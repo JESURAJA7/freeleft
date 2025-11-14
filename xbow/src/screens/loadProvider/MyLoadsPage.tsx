@@ -18,7 +18,6 @@ import {
   UserGroupIcon,
   StarIcon,
   ScaleIcon,
-
   HandRaisedIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
@@ -32,10 +31,10 @@ import { LoadTimeline } from '../../components/LoadTimeline';
 import { MessageModal } from '../../components/MessageModal';
 import { VehicleMatchingModal } from '../../components/vehicles/VehicleMatchingModal';
 import { RatingModal } from '../../components/Rating/RatingModal';
+import { Pagination } from '../../Admin/components/common/Pagination';
 import { loadApplicationAPI } from '../../services/loadApplicationAPI';
-import { vehicleMatchingAPI } from '../../services/api';
+import { vehicleMatchingAPI , loadAPI} from '../../services/api';
 import toast from 'react-hot-toast';
-import { loadAPI } from '../../services/api';
 import { useNavigate } from 'react-router-dom';
 import { CreateBiddingModal } from '../../components/Bidding/CreateBiddingModal';
 
@@ -58,6 +57,9 @@ export const MyLoadsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   useEffect(() => {
     fetchLoads();
   }, []);
@@ -65,6 +67,10 @@ export const MyLoadsPage: React.FC = () => {
   useEffect(() => {
     filterLoads();
   }, [loads, searchTerm, statusFilter, dateFilter]);
+
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm, statusFilter, dateFilter]);
 
   const fetchLoads = async () => {
     try {
@@ -80,7 +86,6 @@ export const MyLoadsPage: React.FC = () => {
       console.error('Error fetching loads:', error);
       toast.error(error.response?.data?.message || 'Failed to fetch loads');
 
-      // Fallback to empty array if API fails
       setLoads([]);
     } finally {
       setLoading(false);
@@ -90,7 +95,6 @@ export const MyLoadsPage: React.FC = () => {
   const filterLoads = () => {
     let filtered = [...loads];
 
-    // Search filter
     if (searchTerm) {
       filtered = filtered.filter(load =>
         load.loadingLocation.place.toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -101,12 +105,10 @@ export const MyLoadsPage: React.FC = () => {
       );
     }
 
-    // Status filter
     if (statusFilter !== 'all') {
       filtered = filtered.filter(load => load.status === statusFilter);
     }
 
-    // Date filter
     if (dateFilter !== 'all') {
       const now = new Date();
       const filterDate = new Date();
@@ -134,6 +136,21 @@ export const MyLoadsPage: React.FC = () => {
     }
 
     setFilteredLoads(filtered);
+  };
+
+  const totalPages = Math.ceil(filteredLoads.length / itemsPerPage);
+  const startIndex = (currentPage - 1) * itemsPerPage;
+  const endIndex = startIndex + itemsPerPage;
+  const paginatedLoads = filteredLoads.slice(startIndex, endIndex);
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
   };
 
   const getStatusColor = (status: string) => {
@@ -169,14 +186,12 @@ export const MyLoadsPage: React.FC = () => {
 
       if (response.data.success) {
         toast.success('Load status updated successfully');
-        // Update the local state to reflect the change
         setLoads(prevLoads =>
           prevLoads.map(load =>
             load._id === loadId ? { ...load, status: newStatus } : load
           )
         );
 
-        // Update selected load if it's the same
         if (selectedLoad?._id === loadId) {
           setSelectedLoad(prev => prev ? { ...prev, status: newStatus } : null);
         }
@@ -224,12 +239,10 @@ export const MyLoadsPage: React.FC = () => {
     }
 
     try {
-      // This endpoint would need to be implemented in your backend
       const response = await loadAPI.deleteLoad(loadId);
 
       if (response.data.success) {
         toast.success('Load deleted successfully');
-        // Remove the load from the local state
         setLoads(prevLoads => prevLoads.filter(load => load._id !== loadId));
       } else {
         throw new Error(response.data.message || 'Failed to delete load');
@@ -247,7 +260,6 @@ export const MyLoadsPage: React.FC = () => {
       const response = await vehicleMatchingAPI.selectVehicle(selectedLoad._id, vehicleId, bidPrice);
       if (response.data.success) {
         toast.success('Vehicle selected successfully!');
-        // Update the load status in local state
         setLoads(prevLoads =>
           prevLoads.map(load =>
             load._id === selectedLoad._id
@@ -284,7 +296,6 @@ export const MyLoadsPage: React.FC = () => {
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -294,7 +305,6 @@ export const MyLoadsPage: React.FC = () => {
           <p className="text-slate-600">Manage and track all your load postings</p>
         </motion.div>
 
-        {/* Filters */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -354,7 +364,6 @@ export const MyLoadsPage: React.FC = () => {
           </div>
         </motion.div>
 
-        {/* Stats Summary */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -390,15 +399,14 @@ export const MyLoadsPage: React.FC = () => {
           })}
         </motion.div>
 
-        {/* Loads Grid */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}
-          className="grid grid-cols-1 lg:grid-cols-2 gap-8"
+          className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8"
         >
           <AnimatePresence>
-            {filteredLoads.map((load, index) => {
+            {paginatedLoads.map((load, index) => {
               const StatusIcon = getStatusIcon(load.status);
               const totalWeight = load.materials?.reduce((sum, material) => sum + material.totalWeight, 0) || 0;
 
@@ -412,9 +420,7 @@ export const MyLoadsPage: React.FC = () => {
                   className="bg-white rounded-2xl shadow-lg border border-slate-200 overflow-hidden hover:shadow-xl transition-all duration-300 cursor-pointer"
                   onClick={() => viewLoadDetails(load)}
                 >
-                  {/* Load Header */}
                   <div className="bg-gradient-to-r from-slate-50 to-blue-50 p-6 border-b border-slate-100">
-                    {/* Header */}
                     <div className="flex items-center justify-between mb-4">
                       <div className={`flex items-center space-x-2 px-3 py-1 rounded-full border ${getStatusColor(load.status)}`}>
                         <StatusIcon className="h-4 w-4" />
@@ -427,7 +433,6 @@ export const MyLoadsPage: React.FC = () => {
                       )}
                     </div>
 
-                    {/* Load ID and Date */}
                     <div className="flex items-center justify-between text-sm text-slate-600 mb-4">
                       <span>Load #{load._id.slice(-6).toUpperCase()}</span>
                       <span>{new Date(load.createdAt).toLocaleDateString()}</span>
@@ -435,7 +440,6 @@ export const MyLoadsPage: React.FC = () => {
                   </div>
 
                   <div className="p-6">
-                    {/* Route */}
                     <div className="mb-6">
                       <div className="flex items-center space-x-3">
                         <div className="flex-1">
@@ -460,7 +464,6 @@ export const MyLoadsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Key Details Grid */}
                     <div className="grid grid-cols-2 gap-4 mb-6">
                       <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
                         <div className="flex items-center space-x-2 mb-2">
@@ -495,9 +498,7 @@ export const MyLoadsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Materials Summary */}
                     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 mb-6">
-                      {/* Photo Preview in Main Card */}
                       {load.photos && load.photos.length > 0 && (
                         <div className="mb-6">
                           <div className="flex items-center justify-between mb-2">
@@ -542,7 +543,6 @@ export const MyLoadsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Actions */}
                     <div className="space-y-3">
                       {load.status === 'posted' && (
                         <>
@@ -581,7 +581,6 @@ export const MyLoadsPage: React.FC = () => {
                             View Applications
                           </Button>
                         </>
-
                       )}
 
                       <div className="grid grid-cols-3 gap-2">
@@ -625,15 +624,22 @@ export const MyLoadsPage: React.FC = () => {
                     </div>
                   </div>
                 </motion.div>
-
               );
             })}
           </AnimatePresence>
-
-
         </motion.div>
 
-        {/* Empty State */}
+        {filteredLoads.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredLoads.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
+        )}
+
         {filteredLoads.length === 0 && !loading && (
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -658,7 +664,6 @@ export const MyLoadsPage: React.FC = () => {
           </motion.div>
         )}
 
-        {/* Enhanced Load Details Modal */}
         <Modal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
@@ -667,7 +672,6 @@ export const MyLoadsPage: React.FC = () => {
         >
           {selectedLoad && (
             <div className="h-full flex flex-col">
-              {/* Header */}
               <div className="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
                 <div className="flex items-center justify-between">
                   <div>
@@ -681,12 +685,9 @@ export const MyLoadsPage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Content */}
               <div className="flex-1 overflow-auto p-6">
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                  {/* Left Column - Route & Basic Info */}
                   <div className="lg:col-span-2 space-y-6">
-                    {/* Route Information */}
                     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
                       <h3 className="text-xl font-bold text-slate-900 mb-6">Route Information</h3>
                       <div className="space-y-6">
@@ -722,7 +723,6 @@ export const MyLoadsPage: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* Schedule */}
                         <div className="grid grid-cols-2 gap-4">
                           <div className="bg-orange-50 border border-orange-200 rounded-xl p-4">
                             <div className="flex items-center space-x-2 mb-2">
@@ -747,7 +747,6 @@ export const MyLoadsPage: React.FC = () => {
                       </div>
                     </div>
 
-                    {/* Materials Details */}
                     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
                       <h3 className="text-xl font-bold text-slate-900 mb-6">Materials ({selectedLoad.materials?.length || 0})</h3>
                       <div className="space-y-4">
@@ -779,7 +778,6 @@ export const MyLoadsPage: React.FC = () => {
                               </div>
                             </div>
 
-                            {/* Material Photos */}
                             {material.photos && material.photos.length > 0 && (
                               <div className="mb-4">
                                 <div className="flex items-center justify-between mb-2">
@@ -814,9 +812,7 @@ export const MyLoadsPage: React.FC = () => {
                     </div>
                   </div>
 
-                  {/* Right Column - Vehicle Requirements & Actions */}
                   <div className="space-y-6">
-                    {/* Vehicle Requirements */}
                     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
                       <h3 className="text-lg font-bold text-slate-900 mb-4">Vehicle Requirements</h3>
                       <div className="space-y-4">
@@ -832,14 +828,9 @@ export const MyLoadsPage: React.FC = () => {
                           <span className="text-slate-600">Trailer:</span>
                           <span className="font-medium text-slate-900 capitalize">{selectedLoad.vehicleRequirement.trailerType || 'None'}</span>
                         </div>
-                        {/* <div className="flex items-center justify-between">
-                          <span className="text-slate-600">Total Weight:</span>
-                          <span className="font-medium text-slate-900">{totalWeight.toLocaleString()} kg</span>
-                        </div> */}
                       </div>
                     </div>
 
-                    {/* Quick Actions */}
                     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
                       <h3 className="text-lg font-bold text-slate-900 mb-4">Quick Actions</h3>
                       <div className="space-y-3">
@@ -909,24 +900,9 @@ export const MyLoadsPage: React.FC = () => {
                             Rate Vehicle Owner
                           </Button>
                         )}
-
-                        {selectedLoad.status === 'completed' && (
-                          <Button
-                            onClick={() => {
-                              setIsModalOpen(false);
-                              setIsRatingModalOpen(true);
-                            }}
-                            variant="outline"
-                            className="w-full bg-yellow-500 hover:bg-yellow-600 text-white"
-                            icon={<StarIcon className="h-4 w-4" />}
-                          >
-                            Rate Vehicle Owner
-                          </Button>
-                        )}
                       </div>
                     </div>
 
-                    {/* Load Statistics */}
                     <div className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6">
                       <h3 className="text-lg font-bold text-slate-900 mb-4">Load Statistics</h3>
                       <div className="space-y-3">
@@ -938,10 +914,6 @@ export const MyLoadsPage: React.FC = () => {
                           <span className="text-slate-600">Materials:</span>
                           <span className="font-medium text-slate-900">{selectedLoad.materials?.length || 0} items</span>
                         </div>
-                        {/* <div className="flex items-center justify-between">
-                          <span className="text-slate-600">Total Weight:</span>
-                          <span className="font-medium text-slate-900">{totalWeight.toLocaleString()} kg</span>
-                        </div> */}
                         {selectedLoad.commissionApplicable && (
                           <div className="flex items-center justify-between">
                             <span className="text-slate-600">Commission:</span>
@@ -957,7 +929,6 @@ export const MyLoadsPage: React.FC = () => {
           )}
         </Modal>
 
-        {/* Timeline Modal */}
         <Modal
           isOpen={isTimelineModalOpen}
           onClose={() => setIsTimelineModalOpen(false)}
@@ -977,7 +948,6 @@ export const MyLoadsPage: React.FC = () => {
           )}
         </Modal>
 
-        {/* Message Modal */}
         <MessageModal
           isOpen={isMessageModalOpen}
           onClose={() => setIsMessageModalOpen(false)}
@@ -986,7 +956,6 @@ export const MyLoadsPage: React.FC = () => {
           onSendMessage={handleSendMessage}
         />
 
-        {/* Vehicle Matching Modal */}
         <VehicleMatchingModal
           isOpen={isVehicleMatchingModalOpen}
           onClose={() => setIsVehicleMatchingModalOpen(false)}
@@ -995,7 +964,6 @@ export const MyLoadsPage: React.FC = () => {
           onSendMessage={handleSendMessageToVehicle}
         />
 
-        {/* Rating Modal */}
         <RatingModal
           isOpen={isRatingModalOpen}
           onClose={() => setIsRatingModalOpen(false)}
@@ -1008,20 +976,6 @@ export const MyLoadsPage: React.FC = () => {
           }}
         />
 
-        {/* Rating Modal */}
-        <RatingModal
-          isOpen={isRatingModalOpen}
-          onClose={() => setIsRatingModalOpen(false)}
-          load={selectedLoad}
-          vehicle={assignedVehicle}
-          userType="load_provider"
-          onRatingSubmitted={() => {
-            setIsRatingModalOpen(false);
-            fetchLoads();
-          }}
-        />
-
-        {/* Create Bidding Modal */}
         <CreateBiddingModal
           isOpen={isCreateBiddingModalOpen}
           onClose={() => setIsCreateBiddingModalOpen(false)}

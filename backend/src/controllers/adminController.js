@@ -1255,11 +1255,11 @@ export const getXbowLoads = async (req, res) => {
     let query = { withXBowSupport: true };
     if (status) query.status = status;
     const loads = await Load.find(query)
-      .populate('loadProviderId', 'name email phone companyName')
+      .populate('loadProviderId', 'name email phone companyName whatsappNumber')
       .populate('assignedVehicleId', 'vehicleNumber ownerName')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .sort({ createdAt: -1 });
+      
+;
     const total = await Load.countDocuments(query);
     res.status(200).json({
       success: true,
@@ -1369,16 +1369,18 @@ export const assignVehicleToLoad = async (req, res) => {
 //get without xbow loads
 export const getWithoutXbowLoads = async (req, res) => {
   try {
-    const { status, page = 1, limit = 10 } = req.query;
+    const { status } = req.query;
+    
     let query = { withXBowSupport: false };
     if (status) query.status = status;
+
     const loads = await Load.find(query)
-      .populate('loadProviderId', 'name email phone companyName')
+      .populate('loadProviderId', 'name email phone companyName whatsappNumber')
       .populate('assignedVehicleId', 'vehicleNumber ownerName')
-      .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      .sort({ createdAt: -1 }); // Recent loads first
+
     const total = await Load.countDocuments(query);
+
     res.status(200).json({
       success: true,
       count: loads.length,

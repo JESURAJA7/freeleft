@@ -20,11 +20,13 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import type { Load, Vehicle } from '../../types';
+import type { Load, Vehicle, User } from '../../types';
 import { Button } from '../../components/common/CustomButton';
 import { Input } from '../../components/common/CustomInput';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Modal } from '../../components/common/Modal';
+import { Pagination } from './common/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { adminAPI } from '../services/adminApi';
 
 export const WithoutXBOWSupport: React.FC = () => {
@@ -44,6 +46,20 @@ export const WithoutXBOWSupport: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [assignmentMessage, setAssignmentMessage] = useState('');
+  console.log("Selected Load:", selectedLoad);
+  //console.log("Material Photos:", selectedLoad.materials[0].phots);
+
+
+  const {
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    paginatedItems,
+    handlePageChange,
+    handleItemsPerPageChange,
+    resetPagination,
+    totalItems,
+  } = usePagination({ items: filteredLoads, initialItemsPerPage: 10 });
 
   useEffect(() => {
     fetchLoadsWithoutXBOW();
@@ -51,6 +67,7 @@ export const WithoutXBOWSupport: React.FC = () => {
 
   useEffect(() => {
     filterLoads();
+    resetPagination();
   }, [loads, searchTerm, statusFilter, priorityFilter]);
 
   const fetchLoadsWithoutXBOW = async () => {
@@ -145,7 +162,7 @@ export const WithoutXBOWSupport: React.FC = () => {
         vehicleOwnerId: selectedVehicle.ownerId,
         loadProviderId: typeof selectedLoad.loadProviderId === 'string'
           ? selectedLoad.loadProviderId
-          : selectedLoad.loadProviderId,
+          : selectedLoad.loadProviderId.id,
         message: assignmentMessage
       };
 
@@ -352,8 +369,8 @@ export const WithoutXBOWSupport: React.FC = () => {
           })}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredLoads.map((load) => {
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+          {paginatedItems.map((load) => {
             const StatusIcon = getStatusIcon(load.status);
             const totalWeight = load.materials?.reduce((sum, material) => sum + material.totalWeight, 0) || 0;
             const priorityLabel = getPriorityLabel(load.loadingDate);
@@ -491,6 +508,15 @@ export const WithoutXBOWSupport: React.FC = () => {
           })}
         </div>
 
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+        />
+
         {filteredLoads.length === 0 && !loading && (
           <div className="text-center py-16 bg-white rounded-2xl shadow-lg border border-slate-200">
             <Truck className="h-16 w-16 text-slate-300 mx-auto mb-4" />
@@ -519,16 +545,52 @@ export const WithoutXBOWSupport: React.FC = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div>
                     <span className="text-blue-700 font-medium">Company:</span>
-                    <p className="text-slate-900">{selectedLoad.loadProviderName}</p>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).companyName
+                        : selectedLoad.loadProviderName}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Contact Name:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).name
+                        : selectedLoad.loadProviderName}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Phone Number:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).phone
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">WhatsApp Number:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).whatsappNumber
+                        : 'N/A'}
+                    </p>
+                  </div>
+                  <div>
+                    <span className="text-blue-700 font-medium">Email:</span>
+                    <p className="text-slate-900">
+                      {typeof selectedLoad.loadProviderId === 'object'
+                        ? (selectedLoad.loadProviderId as User).email
+                        : 'N/A'}
+                    </p>
                   </div>
                   <div>
                     <span className="text-blue-700 font-medium">Load ID:</span>
                     <p className="text-slate-900 font-mono">#{selectedLoad._id.slice(-8).toUpperCase()}</p>
                   </div>
-                  <div>
-                    <span className="text-blue-700 font-medium">Created:</span>
-                    <p className="text-slate-900">{new Date(selectedLoad.createdAt).toLocaleDateString()}</p>
-                  </div>
+                  <p className="text-slate-900">
+                    {new Date(selectedLoad.createdAt).toLocaleString()}
+                  </p>
+
                   <div>
                     <span className="text-blue-700 font-medium">Status:</span>
                     <p className="text-slate-900 capitalize">{selectedLoad.status}</p>
@@ -576,6 +638,60 @@ export const WithoutXBOWSupport: React.FC = () => {
                           {material.totalWeight} kg
                         </span>
                       </div>
+
+                      {/* Enhanced Photos Section */}
+                      {selectedLoad.photos && selectedLoad.photos.length > 0 && (
+                        <div className="mb-6">
+                          <div className="flex items-center justify-between mb-3">
+                            <span className="text-slate-700 font-medium text-sm">
+                              Load Photos ({selectedLoad.photos.length})
+                            </span>
+                            {selectedLoad.photos.length > 6 && (
+                              <span className="text-xs text-slate-500">
+                                +{selectedLoad.photos.length - 6} more
+                              </span>
+                            )}
+                          </div>
+
+                          <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-6 gap-3">
+                            {selectedLoad.photos.slice(0, 6).map((photo, photoIndex) => (
+                              <div key={photo._id || photoIndex} className="relative group">
+                                <img
+                                  src={photo.url}
+                                  alt={`Load photo ${photoIndex + 1}`}
+                                  className="w-full h-20 sm:h-24 object-cover rounded-lg border border-slate-200 cursor-pointer hover:shadow-md transition-all duration-200 hover:scale-105"
+                                  onClick={() => {
+                                    // Open image in modal or lightbox
+                                    window.open(photo.url, '_blank');
+                                  }}
+                                  onError={(e) => {
+                                    // Fallback if image fails to load
+                                    const target = e.target as HTMLImageElement;
+                                    target.src = '/api/placeholder/80/80';
+                                    target.alt = 'Failed to load image';
+                                    target.className = 'w-full h-20 sm:h-24 object-cover rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center';
+                                  }}
+                                />
+                                <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-10 transition-all rounded-lg cursor-pointer"></div>
+                              </div>
+                            ))}
+
+                            {selectedLoad.photos.length > 6 && (
+                              <button
+                                className="w-full h-20 sm:h-24 bg-slate-100 border border-slate-200 rounded-lg flex flex-col items-center justify-center text-slate-600 hover:bg-slate-200 transition-colors"
+                                onClick={() => {
+                                  // Open gallery view with all photos
+                                  console.log('Open gallery with all photos');
+                                }}
+                              >
+                                <span className="text-lg font-bold">+{selectedLoad.photos.length - 6}</span>
+                                <span className="text-xs mt-1">View All</span>
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      )}
+
                       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                         <div>
                           <span className="text-slate-600">Dimensions:</span>
