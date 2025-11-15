@@ -46,7 +46,7 @@ export const WithoutXBOWSupport: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [assignmentMessage, setAssignmentMessage] = useState('');
-  console.log("Selected Load:", selectedLoad);
+ // console.log("Selected Load:", selectedLoad);
   //console.log("Material Photos:", selectedLoad.materials[0].phots);
 
 
@@ -159,7 +159,9 @@ export const WithoutXBOWSupport: React.FC = () => {
         loadId: selectedLoad._id,
         vehicleId: selectedVehicle._id,
         agreedPrice: selectedVehicle.bidPrice || 0,
-        vehicleOwnerId: selectedVehicle.ownerId,
+        vehicleOwnerId: typeof selectedVehicle.ownerId === 'string'
+          ? selectedVehicle.ownerId
+          : (selectedVehicle.ownerId as any)._id || (selectedVehicle.ownerId as any).id,
         loadProviderId: typeof selectedLoad.loadProviderId === 'string'
           ? selectedLoad.loadProviderId
           : selectedLoad.loadProviderId.id,

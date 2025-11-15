@@ -17,9 +17,11 @@ import { Button } from '../../components/common/CustomButton';
 import { Input } from '../../components/common/CustomInput';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Modal } from '../../components/common/Modal';
+import { Pagination } from './common/Pagination';
+import { usePagination } from '../../hooks/usePagination';
 import { adminAPI } from '../services/adminApi';
 import toast from 'react-hot-toast';
-import type { Vehicle } from '../../types';
+import type { Vehicle, User } from '../../types';
 
 export const VehicleManagement: React.FC = () => {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
@@ -31,6 +33,9 @@ export const VehicleManagement: React.FC = () => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
+
+  console.log('Vehicles:', vehicles);
+  //console.log('Selected Vehicle:', selectedVehicle);
 
   const [filters, setFilters] = useState({
     search: '',
@@ -51,8 +56,20 @@ export const VehicleManagement: React.FC = () => {
     fetchVehicles();
   }, []);
 
+  const {
+    currentPage,
+    totalPages,
+    itemsPerPage,
+    paginatedItems,
+    handlePageChange,
+    handleItemsPerPageChange,
+    resetPagination,
+    totalItems,
+  } = usePagination({ items: filteredVehicles, initialItemsPerPage: 12 });
+
   useEffect(() => {
     filterVehicles();
+    resetPagination();
   }, [vehicles, filters]);
 
   const fetchVehicles = async () => {
@@ -317,10 +334,10 @@ export const VehicleManagement: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.5 }}
-          className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+          className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8"
         >
           <AnimatePresence>
-            {filteredVehicles.map((vehicle, index) => (
+            {paginatedItems.map((vehicle, index) => (
               <motion.div
                 key={vehicle._id}
                 initial={{ opacity: 0, y: 20 }}
@@ -535,6 +552,15 @@ export const VehicleManagement: React.FC = () => {
           </AnimatePresence>
         </motion.div>
 
+        <Pagination
+          currentPage={currentPage}
+          totalPages={totalPages}
+          totalItems={totalItems}
+          itemsPerPage={itemsPerPage}
+          onPageChange={handlePageChange}
+          onItemsPerPageChange={handleItemsPerPageChange}
+        />
+
         {/* Vehicle Details Modal */}
         <Modal
           isOpen={isModalOpen}
@@ -545,13 +571,49 @@ export const VehicleManagement: React.FC = () => {
           {selectedVehicle ? (
             <div className="space-y-6">
               {/* Owner Information */}
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4">
-                <h3 className="font-semibold text-blue-800 mb-2">Vehicle Owner</h3>
-                <div className="text-blue-700 text-sm space-y-1">
-                  <p className="font-medium">{selectedVehicle.ownerName}</p>
-                  <p>Vehicle Number: {selectedVehicle.vehicleNumber}</p>
+              <div className="bg-white shadow-sm border border-gray-200 rounded-2xl p-5">
+                <h3 className="font-semibold text-gray-800 text-lg mb-4 flex items-center gap-2">
+                  🚚 Vehicle Owner Details
+                </h3>
+
+                {/* Owner Name + Vehicle Number */}
+                <div className="bg-blue-50 p-4 rounded-lg border border-blue-100 mb-4">
+                  <p className="text-blue-900 font-semibold text-base">
+                    {selectedVehicle?.ownerId?.name || "N/A"}
+                  </p>
+                  <p className="text-blue-700 text-sm">
+                    Vehicle Number:{" "}
+                    <span className="font-medium">{selectedVehicle?.vehicleNumber}</span>
+                  </p>
+                </div>
+
+                {/* Contact Details Section */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Email</span>
+                    <span className="font-medium text-gray-800">
+                      {selectedVehicle?.ownerId?.email || "N/A"}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-gray-600">Phone</span>
+                    <span className="font-medium text-gray-800">
+                      {selectedVehicle?.ownerId?.phone || "N/A"}
+                    </span>
+                  </div>
+
+                  {selectedVehicle?.contactInfo?.whatsapp && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-gray-600">WhatsApp</span>
+                      <span className="font-medium text-gray-800">
+                        {selectedVehicle?.contactInfo?.whatsapp}
+                      </span>
+                    </div>
+                  )}
                 </div>
               </div>
+
 
               {/* Vehicle Specifications */}
               <div>
@@ -624,34 +686,34 @@ export const VehicleManagement: React.FC = () => {
                   )}
                 </div>
               </div>
-             {/* Vehicle Photos Gallery */}
-{selectedVehicle.photos.length > 0 && (
-  <div>
-    <h3 className="font-semibold text-slate-900 mb-4">
-      Vehicle Photos ({selectedVehicle.photos.length}/6)
-    </h3>
-    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
-      {selectedVehicle.photos.map((photo, index) => (
-        <div key={index} className="relative group">
-          <img
-            src={photo.url}
-            alt={photo.type || 'Vehicle photo'}
-            className="w-full h-24 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 transition-opacity cursor-pointer"
-            onClick={() => openImageGallery(selectedVehicle, index)}
-          />
-          <div className="absolute bottom-1 left-1 right-1">
-            <span className="text-xs bg-black bg-opacity-70 text-white px-1 py-0.5 rounded text-center block capitalize">
-              {photo.type ? photo.type.replace('_', ' ') : 'Photo'}
-            </span>
-          </div>
-          <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
-            <EyeIcon className="text-white opacity-0 group-hover:opacity-100 transition-opacity h-5 w-5" />
-          </div>
-        </div>
-      ))}
-    </div>
-  </div>
-)}
+              {/* Vehicle Photos Gallery */}
+              {selectedVehicle.photos.length > 0 && (
+                <div>
+                  <h3 className="font-semibold text-slate-900 mb-4">
+                    Vehicle Photos ({selectedVehicle.photos.length}/6)
+                  </h3>
+                  <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3">
+                    {selectedVehicle.photos.map((photo, index) => (
+                      <div key={index} className="relative group">
+                        <img
+                          src={photo.url}
+                          alt={photo.type || 'Vehicle photo'}
+                          className="w-full h-24 object-cover rounded-lg border border-slate-200 group-hover:opacity-80 transition-opacity cursor-pointer"
+                          onClick={() => openImageGallery(selectedVehicle, index)}
+                        />
+                        <div className="absolute bottom-1 left-1 right-1">
+                          <span className="text-xs bg-black bg-opacity-70 text-white px-1 py-0.5 rounded text-center block capitalize">
+                            {photo.type ? photo.type.replace('_', ' ') : 'Photo'}
+                          </span>
+                        </div>
+                        <div className="absolute inset-0 bg-black bg-opacity-0 group-hover:bg-opacity-40 transition-all rounded-lg flex items-center justify-center">
+                          <EyeIcon className="text-white opacity-0 group-hover:opacity-100 transition-opacity h-5 w-5" />
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
 
               {/* Approval Actions */}
               {!selectedVehicle.isApproved && (

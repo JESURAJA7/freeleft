@@ -167,8 +167,14 @@ export const XBOWSupportPage: React.FC = () => {
         loadId: selectedLoad._id,
         vehicleId: selectedVehicle._id,
         agreedPrice: selectedVehicle.bidPrice || 0, // Use bidPrice or fallback
-        vehicleOwnerId: selectedVehicle.ownerId || selectedVehicle.ownerId, // Check both possible field names
-        loadProviderId: typeof selectedLoad.loadProviderId === 'string' ? selectedLoad.loadProviderId : selectedLoad.loadProviderId?.id, // Handle User object or string
+        // Ensure we pass a string id for vehicleOwnerId (owner object may be present)
+        vehicleOwnerId: typeof selectedVehicle.ownerId === 'string'
+          ? selectedVehicle.ownerId
+          : (selectedVehicle.ownerId as any)?._id,
+        // Ensure loadProviderId is a string id (handle object or string)
+        loadProviderId: typeof selectedLoad.loadProviderId === 'string'
+          ? selectedLoad.loadProviderId
+          : (selectedLoad.loadProviderId as any)?._id,
         message: assignmentMessage,
       };
 

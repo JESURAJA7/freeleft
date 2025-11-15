@@ -285,8 +285,7 @@ export const getLoads = async (req, res) => {
       .populate('loadProviderId', 'name email phone companyName')
       .populate('assignedVehicleId', 'vehicleNumber ownerName')
       .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+      ;
 
     const total = await Load.countDocuments(query);
 
@@ -319,8 +318,7 @@ export const getVehicles = async (req, res) => {
     const vehicles = await Vehicle.find(query)
       .populate('ownerId', 'name email phone')
       .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+     
 
     const total = await Vehicle.countDocuments(query);
 

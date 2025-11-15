@@ -162,7 +162,13 @@ export const isUnsavedLoad = (load: Load): load is UnsavedLoad => {
 export interface Vehicle {
   _id: string;
   id: string;
-  ownerId: string;
+ ownerId: {
+  _id: string;
+  name: string;
+  email: string;
+  phone: number;
+};
+
   ownerName: string;
   vehicleType: string;
   vehicleNumber: string;
