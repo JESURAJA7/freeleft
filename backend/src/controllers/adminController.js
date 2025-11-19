@@ -158,7 +158,7 @@ export const getDashboardStats = async (req, res) => {
 // @access  Private (Admin only)
 export const getUsers = async (req, res) => {
   try {
-    const { role, status, page = 1, limit = 10 } = req.query;
+    const { role, status, page = 1, limit = 12 } = req.query;
     
     let query = {};
     
@@ -169,8 +169,7 @@ export const getUsers = async (req, res) => {
     const users = await User.find(query)
       .select('-password')
       .sort({ createdAt: -1 })
-      .limit(limit * 1)
-      .skip((page - 1) * limit);
+    ;
 
     const total = await User.countDocuments(query);
 

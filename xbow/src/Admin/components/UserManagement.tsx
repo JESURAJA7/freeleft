@@ -20,6 +20,7 @@ import { Button } from '../../components/common/CustomButton';
 import { Input } from '../../components/common/CustomInput';
 import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Modal } from '../../components/common/Modal';
+import { Pagination } from '../components/common/Pagination';
 import { adminAPI } from '../services/adminApi';
 import toast from 'react-hot-toast';
 
@@ -48,17 +49,23 @@ interface User {
 export const UserManagement: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
   const [filteredUsers, setFilteredUsers] = useState<User[]>([]);
+  const [paginatedUsers, setPaginatedUsers] = useState<User[]>([]);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isLimitsModalOpen, setIsLimitsModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [itemsPerPage, setItemsPerPage] = useState(10);
+
   const [filters, setFilters] = useState({
     search: '',
     role: 'all',
     status: 'all',
-    approval: 'all'
+    approval: 'all',
+    dateFrom: '',
+    dateTo: ''
   });
 
   const [approvalSettings, setApprovalSettings] = useState({
@@ -78,6 +85,10 @@ export const UserManagement: React.FC = () => {
   useEffect(() => {
     filterUsers();
   }, [users, filters]);
+
+  useEffect(() => {
+    paginateUsers();
+  }, [filteredUsers, currentPage, itemsPerPage]);
 
   const fetchUsers = async () => {
     try {
@@ -115,13 +126,43 @@ export const UserManagement: React.FC = () => {
     }
 
     if (filters.approval !== 'all') {
-      filtered = filtered.filter(user => 
+      filtered = filtered.filter(user =>
         filters.approval === 'approved' ? user.isApproved : !user.isApproved
       );
     }
 
+    if (filters.dateFrom) {
+      const fromDate = new Date(filters.dateFrom);
+      fromDate.setHours(0, 0, 0, 0);
+      filtered = filtered.filter(user => new Date(user.createdAt) >= fromDate);
+    }
+
+    if (filters.dateTo) {
+      const toDate = new Date(filters.dateTo);
+      toDate.setHours(23, 59, 59, 999);
+      filtered = filtered.filter(user => new Date(user.createdAt) <= toDate);
+    }
+
     setFilteredUsers(filtered);
+    setCurrentPage(1);
   };
+
+  const paginateUsers = () => {
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    setPaginatedUsers(filteredUsers.slice(startIndex, endIndex));
+  };
+
+  const handlePageChange = (page: number) => {
+    setCurrentPage(page);
+  };
+
+  const handleItemsPerPageChange = (newItemsPerPage: number) => {
+    setItemsPerPage(newItemsPerPage);
+    setCurrentPage(1);
+  };
+
+  const totalPages = Math.ceil(filteredUsers.length / itemsPerPage);
 
   const handleApproveUser = async (userId: string) => {
     setActionLoading(userId);
@@ -259,7 +300,7 @@ export const UserManagement: React.FC = () => {
           transition={{ delay: 0.2 }}
           className="bg-white rounded-2xl shadow-lg border border-slate-200 p-6 mb-8"
         >
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-6 gap-4">
             <div className="relative">
               <MagnifyingGlassIcon className="absolute left-3 top-1/2 transform -translate-y-1/2 text-slate-400 h-5 w-5" />
               <Input
@@ -301,6 +342,22 @@ export const UserManagement: React.FC = () => {
               <option value="approved">Approved</option>
               <option value="pending">Pending</option>
             </select>
+
+            <input
+              type="date"
+              value={filters.dateFrom}
+              onChange={(e) => setFilters(prev => ({ ...prev, dateFrom: e.target.value }))}
+              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none"
+              placeholder="From Date"
+            />
+
+            <input
+              type="date"
+              value={filters.dateTo}
+              onChange={(e) => setFilters(prev => ({ ...prev, dateTo: e.target.value }))}
+              className="w-full px-4 py-3 border-2 border-slate-300 rounded-xl focus:border-blue-500 focus:outline-none"
+              placeholder="To Date"
+            />
           </div>
 
           <div className="mt-4 flex justify-between items-center">
@@ -308,7 +365,7 @@ export const UserManagement: React.FC = () => {
               Showing {filteredUsers.length} of {users.length} users
             </p>
             <Button
-              onClick={() => setFilters({ search: '', role: 'all', status: 'all', approval: 'all' })}
+              onClick={() => setFilters({ search: '', role: 'all', status: 'all', approval: 'all', dateFrom: '', dateTo: '' })}
               variant="ghost"
               size="sm"
             >
@@ -322,10 +379,10 @@ export const UserManagement: React.FC = () => {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.3 }}
-          className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6"
+          className="grid grid-cols-1 lg:grid-cols-2 xl:grid-cols-3 gap-6 mb-8"
         >
           <AnimatePresence>
-            {filteredUsers.map((user, index) => {
+            {paginatedUsers.map((user, index) => {
               const RoleIcon = getRoleIcon(user.role);
               const remainingDays = user.trialEndDate ? calculateRemainingDays(user.trialEndDate) : 0;
               const isTrialExpiring = remainingDays <= 3 && user.subscriptionStatus === 'trial';
@@ -536,6 +593,18 @@ export const UserManagement: React.FC = () => {
             })}
           </AnimatePresence>
         </motion.div>
+
+        {/* Pagination */}
+        {filteredUsers.length > 0 && (
+          <Pagination
+            currentPage={currentPage}
+            totalPages={totalPages}
+            totalItems={filteredUsers.length}
+            itemsPerPage={itemsPerPage}
+            onPageChange={handlePageChange}
+            onItemsPerPageChange={handleItemsPerPageChange}
+          />
+        )}
 
         {/* Empty State */}
         {filteredUsers.length === 0 && !loading && (
