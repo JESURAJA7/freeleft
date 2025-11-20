@@ -30,7 +30,9 @@ import {
   getXbowLoads,
   findMatchedVehicles,
   assignVehicleToLoad,
-  getWithoutXbowLoads
+  getWithoutXbowLoads,
+  getVehicleById,
+  updateLoadAssignmentStatus
   
 } from "../controllers/adminController.js";
 import { protect, authorize } from "../middleware/auth.js";
@@ -105,5 +107,9 @@ router.post('/assign-vehicle/:loadId/xbow-support', assignVehicleToLoad);
 
 // Loads without Xbow Support
 router.get('/loads-without-xbow-support', getWithoutXbowLoads);
+
+// Vehicle Details
+router.get('/vehicles/:vehicleId', getVehicleById);
+router.patch('/loads/:loadId/assignment-status', updateLoadAssignmentStatus);
 
 export default router;

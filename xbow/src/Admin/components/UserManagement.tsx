@@ -213,13 +213,20 @@ export const UserManagement: React.FC = () => {
     }
   };
 
-  const calculateRemainingDays = (trialEndDate: string) => {
-    const now = new Date();
-    const endDate = new Date(trialEndDate);
-    const diffTime = endDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
+const calculateRemainingDays = (trialEndDate: string) => {
+  const now = new Date();
+  const end = new Date(trialEndDate);
+
+  // Convert both to YYYY-MM-DD (strip time, remove timezone influence)
+  const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+  const diffTime = endDate.getTime() - startDate.getTime();
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+  return Math.max(0, diffDays);
+};
+
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -395,7 +402,7 @@ export const UserManagement: React.FC = () => {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ delay: index * 0.1 }}
                   className={`bg-white rounded-2xl shadow-lg border overflow-hidden hover:shadow-xl transition-all duration-300 ${
-                    isTrialExpiring ? 'border-red-300 ring-2 ring-red-100' : 'border-slate-200'
+                    isTrialExpiring ? 'border-green-300 ring-2 ring-green-100' : 'border-slate-200'
                   }`}
                 >
                   <div className="p-6">

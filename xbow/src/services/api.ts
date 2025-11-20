@@ -184,6 +184,9 @@ export const profileAPI = {
 
   // Get completion stats (admin-level)
   getCompletionStats: () => api.get('/profile/completion-stats'),
+
+  // Get user limits (for load providers)
+  getMyLimits: () => api.get('/profile/my-limits'),
 };
 
 export const subscriptionAPI = {

@@ -13,7 +13,7 @@ import {
   StarIcon
 } from '@heroicons/react/24/outline';
 import { useAuth } from '../../contexts/AuthContext';
-import { loadAPI } from '../../services/api';
+import { loadAPI, profileAPI } from '../../services/api';
 import type { Load, DashboardStats } from '../../types/index';
 import { adminAPI } from '../../Admin/services/adminApi';
 import { Button } from '../../components/common/CustomButton';
@@ -40,32 +40,40 @@ export const LoadProviderDashboard: React.FC = () => {
   const fetchUserLimits = async () => {
     try {
       // This would be implemented in your user API
-      // const response = await userAPI.getMyLimits();
+      const response = await profileAPI.getMyLimits();
       // For now, using mock data
-      setUserLimits({
-        maxLoadsAllowed: 5,
-        loadsPosted: loads.length,
-        trialEndDate: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(), // 7 days from now
-        subscriptionStatus: 'trial'
-      });
+      if (response.data.success) {
+        setUserLimits(response.data.data);
+      }
     } catch (error) {
       console.error('Error fetching user limits:', error);
     }
   };
 
-  const calculateRemainingDays = (trialEndDate: string) => {
-    const now = new Date();
-    const endDate = new Date(trialEndDate);
-    const diffTime = endDate.getTime() - now.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return Math.max(0, diffDays);
-  };
+const calculateRemainingDays = (trialEndDate: string) => {
+  const now = new Date();
+  const end = new Date(trialEndDate);
+
+  // Convert both to YYYY-MM-DD (strip time, remove timezone influence)
+  const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+  const diffTime = endDate.getTime() - startDate.getTime();
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+  return Math.max(0, diffDays);
+};
+
+
+  const remainingDays = userLimits?.trialEndDate ? calculateRemainingDays(userLimits.trialEndDate) : null;
+  //console.log('Remaining Days:', remainingDays);
+  const isTrialExpiring = remainingDays !== null && remainingDays <= 5 && userLimits?.subscriptionStatus === 'trial';
   const fetchDashboardData = async () => {
     try {
       const loadsResponse = await loadAPI.getMyLoads();
       if (loadsResponse.data.success) {
         setLoads(loadsResponse.data.data);
-        
+
         // Calculate stats from loads data
         const loadData = loadsResponse.data.data;
         const dashboardStats: DashboardStats = {
@@ -112,21 +120,36 @@ export const LoadProviderDashboard: React.FC = () => {
           initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8, ease: "easeOut" }}
-          className={`relative overflow-hidden rounded-3xl p-8 mb-8 shadow-2xl ${
-            userLimits?.subscriptionStatus === 'trial' 
+          className={`relative overflow-hidden rounded-3xl p-8 mb-8 shadow-2xl ${userLimits?.subscriptionStatus === 'trial'
               ? 'bg-gradient-to-r from-orange-500 via-red-500 to-pink-500'
               : 'bg-gradient-to-r from-blue-600 via-indigo-600 to-purple-600'
-          }`}
+            }`}
         >
+
           {/* Trial Warning Banner */}
-          {userLimits?.subscriptionStatus === 'trial' && userLimits.trialEndDate && (
+
+          {userLimits?.subscriptionStatus === 'trial' && userLimits?.trialEndDate && (
             <div className="absolute top-4 right-4 bg-white/20 backdrop-blur-sm rounded-xl p-3 border border-white/30">
+
               <div className="text-center">
+                {/* Remaining Days */}
                 <p className="text-white font-bold text-lg">
-                  {calculateRemainingDays(userLimits.trialEndDate)} Days Left
+                  {remainingDays !== null && remainingDays > 0 ? `${remainingDays} Days Left` : "Trial Ended"}
                 </p>
-                <p className="text-white/80 text-xs">Trial Period</p>
+
+                {/* End Date */}
+                <p className="text-white font-medium text-sm">
+                  Ends on: {new Date(userLimits.trialEndDate).toLocaleDateString('en-GB')}
+                </p>
               </div>
+
+              {/* Expiry Warning */}
+              {isTrialExpiring && remainingDays > 0 && (
+                <p className="text-white text-sm mt-2">
+                  Your trial is ending soon. Upgrade now to continue enjoying uninterrupted services!
+                </p>
+              )}
+
             </div>
           )}
 
@@ -134,12 +157,12 @@ export const LoadProviderDashboard: React.FC = () => {
           <div className="absolute inset-0 overflow-hidden">
             {/* Floating Documents */}
             <motion.div
-              animate={{ 
+              animate={{
                 x: [0, 120, 0],
                 y: [0, -25, 0],
                 rotate: [0, 10, 0]
               }}
-              transition={{ 
+              transition={{
                 duration: 12,
                 repeat: Infinity,
                 ease: "easeInOut"
@@ -148,14 +171,14 @@ export const LoadProviderDashboard: React.FC = () => {
             >
               <DocumentTextIcon className="h-14 w-14 text-white" />
             </motion.div>
-            
+
             <motion.div
-              animate={{ 
+              animate={{
                 x: [0, -90, 0],
                 y: [0, 20, 0],
                 rotate: [0, -15, 0]
               }}
-              transition={{ 
+              transition={{
                 duration: 10,
                 repeat: Infinity,
                 ease: "easeInOut",
@@ -168,11 +191,11 @@ export const LoadProviderDashboard: React.FC = () => {
 
             {/* Network Connections */}
             <motion.div
-              animate={{ 
+              animate={{
                 scale: [1, 1.1, 1],
                 opacity: [0.3, 0.6, 0.3]
               }}
-              transition={{ 
+              transition={{
                 duration: 4,
                 repeat: Infinity,
                 ease: "easeInOut"
@@ -209,7 +232,7 @@ export const LoadProviderDashboard: React.FC = () => {
 
             {/* Animated Gradient Overlay */}
             <motion.div
-              animate={{ 
+              animate={{
                 background: [
                   'linear-gradient(45deg, rgba(59, 130, 246, 0.1) 0%, rgba(147, 51, 234, 0.1) 100%)',
                   'linear-gradient(45deg, rgba(147, 51, 234, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%)'
@@ -230,22 +253,21 @@ export const LoadProviderDashboard: React.FC = () => {
               >
                 <h2 className="text-4xl font-bold text-white mb-2 flex items-center">
                   <motion.span
-                    animate={{ 
+                    animate={{
                       scale: [1, 1.1, 1],
-                      color: userLimits?.subscriptionStatus === 'trial' 
+                      color: userLimits?.subscriptionStatus === 'trial'
                         ? ["#ffffff", "#fbbf24", "#ffffff"]
                         : ["#ffffff", "#ff6b6b", "#ffffff"]
                     }}
-                    transition={{ 
-                      duration: 2, 
-                      repeat: Infinity, 
-                      ease: "easeInOut" 
+                    transition={{
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
                     }}
-                    className={`mr-3 bg-clip-text text-transparent ${
-                      userLimits?.subscriptionStatus === 'trial'
+                    className={`mr-3 bg-clip-text text-transparent ${userLimits?.subscriptionStatus === 'trial'
                         ? 'bg-gradient-to-r from-yellow-300 to-orange-300'
                         : 'bg-gradient-to-r from-red-400 to-yellow-400'
-                    }`}
+                      }`}
                   >
                     Free Left
                   </motion.span>
@@ -255,7 +277,7 @@ export const LoadProviderDashboard: React.FC = () => {
                     </span>
                   )}
                 </h2>
-                
+
                 {/* Load Limit Warning */}
                 {userLimits && (
                   <div className="bg-white/10 backdrop-blur-sm rounded-xl p-4 mt-4">
@@ -266,11 +288,10 @@ export const LoadProviderDashboard: React.FC = () => {
                           {userLimits.loadsPosted} / {userLimits.maxLoadsAllowed} loads posted
                         </p>
                       </div>
-                      <div className={`px-3 py-2 rounded-lg ${
-                        userLimits.loadsPosted >= userLimits.maxLoadsAllowed
+                      <div className={`px-3 py-2 rounded-lg ${userLimits.loadsPosted >= userLimits.maxLoadsAllowed
                           ? 'bg-red-500/20 border border-red-400/30'
                           : 'bg-green-500/20 border border-green-400/30'
-                      }`}>
+                        }`}>
                         <p className="text-white font-bold">
                           {userLimits.maxLoadsAllowed - userLimits.loadsPosted} Left
                         </p>
@@ -282,7 +303,7 @@ export const LoadProviderDashboard: React.FC = () => {
                 <div className="flex items-center space-x-6 text-white/90 mt-4">
                   <div className="flex items-center space-x-2">
                     <motion.div
-                      animate={{ 
+                      animate={{
                         boxShadow: [
                           '0 0 0 0 rgba(34, 197, 94, 0.7)',
                           '0 0 0 10px rgba(34, 197, 94, 0)',
@@ -295,7 +316,7 @@ export const LoadProviderDashboard: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <motion.div
-                      animate={{ 
+                      animate={{
                         boxShadow: [
                           '0 0 0 0 rgba(59, 130, 246, 0.7)',
                           '0 0 0 10px rgba(59, 130, 246, 0)',
@@ -308,7 +329,7 @@ export const LoadProviderDashboard: React.FC = () => {
                   </div>
                   <div className="flex items-center space-x-2">
                     <motion.div
-                      animate={{ 
+                      animate={{
                         boxShadow: [
                           '0 0 0 0 rgba(251, 191, 36, 0.7)',
                           '0 0 0 10px rgba(251, 191, 36, 0)',
@@ -331,7 +352,7 @@ export const LoadProviderDashboard: React.FC = () => {
             >
               <div className="relative">
                 <motion.div
-                  animate={{ 
+                  animate={{
                     y: [0, -15, 0],
                     rotateX: [0, 5, 0]
                   }}
@@ -533,9 +554,9 @@ export const LoadProviderDashboard: React.FC = () => {
                       </span>
                     </div>
                     <div className="flex items-center space-x-6 text-sm text-slate-600">
-                    <span>Vehicle: {load.vehicleRequirement.size}ft {load.vehicleRequirement.vehicleType}</span>
+                      <span>Vehicle: {load.vehicleRequirement.size}ft {load.vehicleRequirement.vehicleType}</span>
 
-                     <span>Materials: {load.materials?.length ?? 0}</span>
+                      <span>Materials: {load.materials?.length ?? 0}</span>
 
                       <span>Posted: {new Date(load.createdAt).toLocaleDateString()}</span>
                     </div>

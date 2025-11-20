@@ -18,7 +18,8 @@ import {
   UserGroupIcon,
   StarIcon,
   ScaleIcon,
-  HandRaisedIcon
+  HandRaisedIcon,
+  LockClosedIcon
 } from '@heroicons/react/24/outline';
 import { StarIcon as StarSolidIcon } from '@heroicons/react/24/solid';
 import { useAuth } from '../../contexts/AuthContext';
@@ -33,10 +34,18 @@ import { VehicleMatchingModal } from '../../components/vehicles/VehicleMatchingM
 import { RatingModal } from '../../components/Rating/RatingModal';
 import { Pagination } from '../../Admin/components/common/Pagination';
 import { loadApplicationAPI } from '../../services/loadApplicationAPI';
-import { vehicleMatchingAPI , loadAPI} from '../../services/api';
+import { vehicleMatchingAPI, loadAPI, profileAPI } from '../../services/api';
 import toast from 'react-hot-toast';
 import { useNavigate } from 'react-router-dom';
 import { CreateBiddingModal } from '../../components/Bidding/CreateBiddingModal';
+
+interface UserLimits {
+  subscriptionStatus: 'trial' | 'premium' | 'expired';
+  trialEndDate?: string;
+  maxLoads: number;
+  currentLoads: number;
+  canCreateLoad: boolean;
+}
 
 export const MyLoadsPage: React.FC = () => {
   const { user } = useAuth();
@@ -56,11 +65,14 @@ export const MyLoadsPage: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
+  const [userLimits, setUserLimits] = useState<UserLimits | null>(null);
+  const [limitsLoading, setLimitsLoading] = useState(true);
 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
   useEffect(() => {
+    fetchUserLimits();
     fetchLoads();
   }, []);
 
@@ -72,20 +84,81 @@ export const MyLoadsPage: React.FC = () => {
     setCurrentPage(1);
   }, [searchTerm, statusFilter, dateFilter]);
 
+  const fetchUserLimits = async () => {
+    try {
+      setLimitsLoading(true);
+      // Mock implementation - replace with actual API call
+      const response = await profileAPI.getMyLimits();
+      
+      if (response.data.success) {
+        setUserLimits(response.data.data);
+      } else {
+        // Fallback mock data
+        setUserLimits({
+          subscriptionStatus: 'trial',
+          trialEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
+          maxLoads: 3,
+          currentLoads: loads.length,
+          canCreateLoad: loads.length < 3
+        });
+      }
+    } catch (error: any) {
+      console.error('Error fetching user limits:', error);
+      // Fallback mock data on error
+      setUserLimits({
+        subscriptionStatus: 'trial',
+        trialEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
+        maxLoads: 3,
+        currentLoads: loads.length,
+        canCreateLoad: loads.length < 3
+      });
+    } finally {
+      setLimitsLoading(false);
+    }
+  };
+
+const calculateRemainingDays = (trialEndDate: string) => {
+  const now = new Date();
+  const end = new Date(trialEndDate);
+
+  // Convert both to YYYY-MM-DD (strip time, remove timezone influence)
+  const startDate = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const endDate = new Date(end.getFullYear(), end.getMonth(), end.getDate());
+
+  const diffTime = endDate.getTime() - startDate.getTime();
+  const diffDays = diffTime / (1000 * 60 * 60 * 24);
+
+  return Math.max(0, diffDays);
+};
+
+
+  const remainingDays = userLimits?.trialEndDate ? calculateRemainingDays(userLimits.trialEndDate) : null;
+  const isTrialExpiring = remainingDays !== null && remainingDays <= 5 && userLimits?.subscriptionStatus === 'trial';
+  const hasReachedLimit = Boolean(userLimits && !userLimits.canCreateLoad);
+
   const fetchLoads = async () => {
     try {
       setLoading(true);
       const response = await loadAPI.getMyLoads();
 
       if (response.data.success) {
-        setLoads(response.data.data);
+        const loadData = response.data.data;
+        setLoads(loadData);
+        
+        // Update user limits with current load count
+        if (userLimits) {
+          setUserLimits(prev => prev ? {
+            ...prev,
+            currentLoads: loadData.length,
+            canCreateLoad: loadData.length < prev.maxLoads
+          } : prev);
+        }
       } else {
         throw new Error(response.data.message || 'Failed to fetch loads');
       }
     } catch (error: any) {
       console.error('Error fetching loads:', error);
       toast.error(error.response?.data?.message || 'Failed to fetch loads');
-
       setLoads([]);
     } finally {
       setLoading(false);
@@ -244,6 +317,8 @@ export const MyLoadsPage: React.FC = () => {
       if (response.data.success) {
         toast.success('Load deleted successfully');
         setLoads(prevLoads => prevLoads.filter(load => load._id !== loadId));
+        // Update limits after deletion
+        fetchUserLimits();
       } else {
         throw new Error(response.data.message || 'Failed to delete load');
       }
@@ -285,7 +360,16 @@ export const MyLoadsPage: React.FC = () => {
     }
   };
 
-  if (loading) {
+  const handleUpgradeToPremium = () => {
+    navigate('/payment', { 
+      state: { 
+        plan: 'premium',
+        redirectUrl: '/my-loads'
+      }
+    });
+  };
+
+  if (loading || limitsLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <LoadingSpinner size="xl" />
@@ -301,10 +385,95 @@ export const MyLoadsPage: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">My Loads</h1>
-          <p className="text-slate-600">Manage and track all your load postings</p>
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-3xl font-bold text-slate-900 mb-2">My Loads</h1>
+              <p className="text-slate-600">Manage and track all your load postings</p>
+            </div>
+            
+            {/* Create Load Button with Limit Check */}
+            <div className="flex items-center space-x-4">
+              {hasReachedLimit && (
+                <div className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
+                  {userLimits?.currentLoads}/{userLimits?.maxLoads} Loads Used
+                </div>
+              )}
+              <Button
+                onClick={() => {
+                  if (hasReachedLimit) {
+                    toast.error(`You've reached your limit of ${userLimits?.maxLoads} loads. Upgrade to premium for unlimited loads.`);
+                    return;
+                  }
+                  window.location.href = '/post-load';
+                }}
+                disabled={hasReachedLimit}
+                className={hasReachedLimit ? "bg-slate-400 cursor-not-allowed" : ""}
+                icon={hasReachedLimit ? <LockClosedIcon className="h-4 w-4" /> : <DocumentTextIcon className="h-4 w-4" />}
+              >
+                {hasReachedLimit ? 'Limit Reached' : 'Create New Load'}
+              </Button>
+            </div>
+          </div>
+
+          {/* Trial Expiring Warning */}
+          {isTrialExpiring && userLimits && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-4 bg-gradient-to-r from-orange-500 to-red-500 text-white p-4 rounded-2xl shadow-lg"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <ExclamationTriangleIcon className="h-6 w-6" />
+                  <div>
+                    <h3 className="font-semibold">Trial Period Ending Soon!</h3>
+                    <p className="text-orange-100">
+                      Your trial ends in {remainingDays} day{remainingDays !== 1 ? 's' : ''}. Upgrade to premium to continue creating loads.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleUpgradeToPremium}
+                  variant="outline"
+                  className="bg-white text-orange-600 hover:bg-orange-50 border-white"
+                >
+                  Upgrade Now
+                </Button>
+              </div>
+            </motion.div>
+          )}
+
+          {/* Limit Reached Warning */}
+          {hasReachedLimit && userLimits && (
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              className="mt-4 bg-gradient-to-r from-red-500 to-pink-500 text-white p-4 rounded-2xl shadow-lg"
+            >
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <LockClosedIcon className="h-6 w-6" />
+                  <div>
+                    <h3 className="font-semibold">Load Limit Reached!</h3>
+                    <p className="text-red-100">
+                      You've reached your maximum limit of {userLimits.maxLoads} loads. 
+                      {userLimits.subscriptionStatus === 'trial' ? ' Upgrade to premium for unlimited loads.' : ' Upgrade your plan for more loads.'}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  onClick={handleUpgradeToPremium}
+                  variant="outline"
+                  className="bg-white text-red-600 hover:bg-red-50 border-white"
+                >
+                  Unlock Premium
+                </Button>
+              </div>
+            </motion.div>
+          )}
         </motion.div>
 
+        {/* Rest of your existing component remains the same */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -364,6 +533,7 @@ export const MyLoadsPage: React.FC = () => {
           </div>
         </motion.div>
 
+        {/* Statistics Cards */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -371,10 +541,31 @@ export const MyLoadsPage: React.FC = () => {
           className="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8"
         >
           {[
-            { label: 'Total Loads', value: loads.length, color: 'blue', icon: DocumentTextIcon },
-            { label: 'Active', value: loads.filter(l => ['posted', 'assigned', 'enroute'].includes(l.status)).length, color: 'orange', icon: TruckIcon },
-            { label: 'Completed', value: loads.filter(l => l.status === 'completed').length, color: 'green', icon: CheckCircleIcon },
-            { label: 'Commission', value: `₹${loads.filter(l => l.commissionApplicable).reduce((sum, l) => sum + (l.commissionAmount || 0), 0).toLocaleString()}`, color: 'emerald', icon: CurrencyRupeeIcon }
+            { 
+              label: 'Total Loads', 
+              value: loads.length, 
+              color: 'blue', 
+              icon: DocumentTextIcon,
+              limit: userLimits ? `${userLimits.currentLoads}/${userLimits.maxLoads}` : undefined
+            },
+            { 
+              label: 'Active', 
+              value: loads.filter(l => ['posted', 'assigned', 'enroute'].includes(l.status)).length, 
+              color: 'orange', 
+              icon: TruckIcon 
+            },
+            { 
+              label: 'Completed', 
+              value: loads.filter(l => l.status === 'completed').length, 
+              color: 'green', 
+              icon: CheckCircleIcon 
+            },
+            { 
+              label: 'Commission', 
+              value: `₹${loads.filter(l => l.commissionApplicable).reduce((sum, l) => sum + (l.commissionAmount || 0), 0).toLocaleString()}`, 
+              color: 'emerald', 
+              icon: CurrencyRupeeIcon 
+            }
           ].map((stat, index) => {
             const Icon = stat.icon;
             return (
@@ -389,6 +580,9 @@ export const MyLoadsPage: React.FC = () => {
                   <div>
                     <p className="text-slate-600 text-sm font-medium">{stat.label}</p>
                     <p className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</p>
+                    {stat.limit && (
+                      <p className="text-xs text-slate-500 mt-1">{stat.limit}</p>
+                    )}
                   </div>
                   <div className={`h-12 w-12 bg-${stat.color}-100 rounded-xl flex items-center justify-center`}>
                     <Icon className={`h-6 w-6 text-${stat.color}-600`} />
@@ -399,7 +593,7 @@ export const MyLoadsPage: React.FC = () => {
           })}
         </motion.div>
 
-        <motion.div
+ <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.4 }}

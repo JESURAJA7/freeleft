@@ -33,7 +33,8 @@ import { LoadingSpinner } from '../../components/common/LoadingSpinner';
 import { Modal } from '../../components/common/Modal';
 import { adminAPI } from '../services/adminApi';
 import { usePagination } from '../../hooks/usePagination';
-import { Pagination } from './common/Pagination'; // Add this import
+import { Pagination } from './common/Pagination';
+import { LoadTimeline } from '../../components/LoadTimeline';
 import toast from 'react-hot-toast';
 
 export const XBOWSupportPage: React.FC = () => {
@@ -43,12 +44,15 @@ export const XBOWSupportPage: React.FC = () => {
   const [selectedLoad, setSelectedLoad] = useState<Load | null>(null);
   const [matchedVehicles, setMatchedVehicles] = useState<Vehicle[]>([]);
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
+  const [assignedVehicle, setAssignedVehicle] = useState<Vehicle | null>(null);
   const [isLoadDetailsModalOpen, setIsLoadDetailsModalOpen] = useState(false);
   const [isVehicleMatchingModalOpen, setIsVehicleMatchingModalOpen] = useState(false);
   const [isAssignVehicleModalOpen, setIsAssignVehicleModalOpen] = useState(false);
+  const [isAssignedVehicleStatusModalOpen, setIsAssignedVehicleStatusModalOpen] = useState(false);
   const [loading, setLoading] = useState(true);
   const [matchingLoading, setMatchingLoading] = useState(false);
   const [assigningLoading, setAssigningLoading] = useState(false);
+  const [statusLoading, setStatusLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -162,16 +166,13 @@ export const XBOWSupportPage: React.FC = () => {
     try {
       setAssigningLoading(true);
 
-      // Prepare the required data
       const assignmentData = {
         loadId: selectedLoad._id,
         vehicleId: selectedVehicle._id,
-        agreedPrice: selectedVehicle.bidPrice || 0, // Use bidPrice or fallback
-        // Ensure we pass a string id for vehicleOwnerId (owner object may be present)
+        agreedPrice: selectedVehicle.bidPrice || 0,
         vehicleOwnerId: typeof selectedVehicle.ownerId === 'string'
           ? selectedVehicle.ownerId
           : (selectedVehicle.ownerId as any)?._id,
-        // Ensure loadProviderId is a string id (handle object or string)
         loadProviderId: typeof selectedLoad.loadProviderId === 'string'
           ? selectedLoad.loadProviderId
           : (selectedLoad.loadProviderId as any)?._id,
@@ -205,6 +206,55 @@ export const XBOWSupportPage: React.FC = () => {
     } finally {
       setAssigningLoading(false);
     }
+  };
+
+  const viewAssignedVehicleStatus = async (load: Load) => {
+    if (!load.assignedVehicleId) return;
+
+    try {
+      setStatusLoading(true);
+      setSelectedLoad(load);
+      console.log("Fetching vehicle details for ID:", load.assignedVehicleId);
+
+      const vehicleId = typeof load.assignedVehicleId === 'string' ? load.assignedVehicleId : load.assignedVehicleId._id;
+
+      const response = await adminAPI.getVehicleById(vehicleId);
+      if (response.data.success) {
+        setAssignedVehicle(response.data.data);
+        setIsAssignedVehicleStatusModalOpen(true);
+      }
+    } catch (error: any) {
+      console.error('Error fetching vehicle details:', error);
+      toast.error('Failed to fetch vehicle details');
+    } finally {
+      setStatusLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (newStatus: string) => {
+    if (!selectedLoad) return;
+
+    try {
+      const response = await adminAPI.updateLoadStatus(selectedLoad._id, { status: newStatus });
+      if (response.data.success) {
+        toast.success('Load status updated successfully!');
+        setLoads(prevLoads =>
+          prevLoads.map(load =>
+            load._id === selectedLoad._id
+              ? { ...load, status: newStatus }
+              : load
+          )
+        );
+        setSelectedLoad({ ...selectedLoad, status: newStatus });
+      }
+    } catch (error: any) {
+      console.error('Error updating load status:', error);
+      toast.error('Failed to update load status');
+    }
+  };
+
+  const handleSendMessage = () => {
+    toast.success('Message feature coming soon!');
   };
 
   const getStatusColor = (status: string) => {
@@ -514,7 +564,6 @@ export const XBOWSupportPage: React.FC = () => {
                       </div> */}
                     </div>
 
-                    {/* Actions */}
                     <div className="space-y-3">
                       <div className="grid grid-cols-2 gap-3">
                         <Button
@@ -528,25 +577,36 @@ export const XBOWSupportPage: React.FC = () => {
                         >
                           View Details
                         </Button>
-                        <Button
-                          onClick={() => findMatchedVehicles(load)}
-                          loading={matchingLoading && selectedLoad?._id === load._id}
-                          disabled={load.status !== 'posted'}
-                          className="bg-purple-600 hover:bg-purple-700"
-                          size="sm"
-                          icon={<TruckIcon className="h-4 w-4" />}
-                        >
-                          Find Vehicles
-                        </Button>
+                        {load.status === 'posted' ? (
+                          <Button
+                            onClick={() => findMatchedVehicles(load)}
+                            loading={matchingLoading && selectedLoad?._id === load._id}
+                            className="bg-purple-600 hover:bg-purple-700"
+                            size="sm"
+                            icon={<TruckIcon className="h-4 w-4" />}
+                          >
+                            Find Vehicles
+                          </Button>
+                        ) : (
+                          <Button
+                            onClick={() => viewAssignedVehicleStatus(load)}
+                            loading={statusLoading && selectedLoad?._id === load._id}
+                            className="bg-emerald-600 hover:bg-emerald-700"
+                            size="sm"
+                            icon={<TruckIcon className="h-4 w-4" />}
+                          >
+                            Vehicle Status
+                          </Button>
+                        )}
                       </div>
 
-                      {load.status === 'assigned' && (
+                      {load.status !== 'posted' && load.status !== 'completed' && (
                         <div className="bg-green-50 border border-green-200 rounded-xl p-3">
                           <div className="flex items-center space-x-2">
                             <CheckCircleIcon className="h-4 w-4 text-green-600" />
                             <span className="text-sm font-medium text-green-800">Vehicle Assigned</span>
                           </div>
-                          <p className="text-xs text-green-600 mt-1">Load is now being handled by assigned vehicle</p>
+                          <p className="text-xs text-green-600 mt-1">Load is being tracked with assigned vehicle</p>
                         </div>
                       )}
                     </div>
@@ -877,7 +937,6 @@ export const XBOWSupportPage: React.FC = () => {
                   <strong>{selectedLoad.loadingLocation.place}</strong> to{' '}
                   <strong>{selectedLoad.unloadingLocation.place}</strong>
                 </p>
-                {/* FIXED LINE - Added safe handling for undefined bidPrice */}
                 <p className="text-sm text-green-600 mt-2">
                   Estimated Price: ₹{(selectedVehicle.bidPrice || 0).toLocaleString()}
                 </p>
@@ -913,6 +972,158 @@ export const XBOWSupportPage: React.FC = () => {
                   Confirm Assignment
                 </Button>
               </div>
+            </div>
+          )}
+        </Modal>
+
+        {/* Assigned Vehicle Status Modal */}
+        <Modal
+          isOpen={isAssignedVehicleStatusModalOpen}
+          onClose={() => {
+            setIsAssignedVehicleStatusModalOpen(false);
+            setAssignedVehicle(null);
+          }}
+          title="Assigned Vehicle Status"
+          size="2xl"
+        >
+          {selectedLoad && assignedVehicle && (
+            <div className="space-y-6">
+              <div className="bg-gradient-to-r from-emerald-50 to-blue-50 border border-emerald-200 rounded-xl p-6">
+                <div className="flex items-center justify-between mb-4">
+                  <div>
+                    <h3 className="text-xl font-bold text-slate-900 mb-1">Load #{selectedLoad._id.slice(-8).toUpperCase()}</h3>
+                    <p className="text-slate-600">
+                      {selectedLoad.loadingLocation.place} → {selectedLoad.unloadingLocation.place}
+                    </p>
+                  </div>
+                  <div className={`flex items-center space-x-2 px-4 py-2 rounded-full border ${getStatusColor(selectedLoad.status)}`}>
+                    <span className="text-sm font-medium capitalize">{selectedLoad.status}</span>
+                  </div>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div className="bg-white border border-slate-200 rounded-xl p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <TruckIcon className="h-5 w-5 text-blue-600" />
+                    <h3 className="text-lg font-bold text-slate-900">Vehicle Details</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-12 w-12 bg-blue-100 rounded-full flex items-center justify-center">
+                        <TruckIcon className="h-6 w-6 text-blue-600" />
+                      </div>
+                      <div>
+                        <h4 className="font-semibold text-slate-900">{assignedVehicle.vehicleNumber}</h4>
+                        <p className="text-sm text-slate-600">
+                          {assignedVehicle.vehicleType} • {assignedVehicle.vehicleSize}ft
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-slate-600 text-sm">Owner:</span>
+                        <p className="font-medium text-slate-900">{assignedVehicle.ownerName}</p>
+                      </div>
+                      <div>
+                        <span className="text-slate-600 text-sm">Status:</span>
+                        <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
+                          assignedVehicle.status === 'available'
+                            ? 'bg-green-100 text-green-700'
+                            : 'bg-yellow-100 text-yellow-700'
+                        }`}>
+                          {assignedVehicle.status}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-slate-600 text-sm">Rating:</span>
+                        <div className="flex items-center space-x-1">
+                          <StarSolidIcon className="h-4 w-4 text-yellow-400" />
+                          <span className="font-medium text-slate-900">
+                            {assignedVehicle.rating || 'No rating'}
+                          </span>
+                        </div>
+                      </div>
+                      <div>
+                        <span className="text-slate-600 text-sm">Capacity:</span>
+                        <p className="font-medium text-slate-900">{assignedVehicle.passingLimit || 0}T</p>
+                      </div>
+                    </div>
+
+                    {assignedVehicle.operatingAreas && assignedVehicle.operatingAreas.length > 0 && (
+                      <div>
+                        <span className="text-slate-600 text-sm">Operating Areas:</span>
+                        <div className="mt-2 space-y-2">
+                          {assignedVehicle.operatingAreas.map((area, index) => (
+                            <div key={index} className="bg-slate-50 rounded-lg p-3">
+                              <p className="font-medium text-slate-900">{area.place}</p>
+                              <p className="text-sm text-slate-600">{area.district}, {area.state}</p>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                <div className="bg-white border border-slate-200 rounded-xl p-6">
+                  <div className="flex items-center space-x-2 mb-4">
+                    <MapPinIcon className="h-5 w-5 text-emerald-600" />
+                    <h3 className="text-lg font-bold text-slate-900">Load Details</h3>
+                  </div>
+                  <div className="space-y-4">
+                    <div>
+                      <span className="text-slate-600 text-sm">Load Provider:</span>
+                      <p className="font-medium text-slate-900">{selectedLoad.loadProviderName}</p>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-600 text-sm">Loading Location:</span>
+                      <div className="bg-blue-50 rounded-lg p-3 mt-1">
+                        <p className="font-medium text-slate-900">{selectedLoad.loadingLocation.place}</p>
+                        <p className="text-sm text-slate-600">
+                          {selectedLoad.loadingLocation.district}, {selectedLoad.loadingLocation.state}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <span className="text-slate-600 text-sm">Unloading Location:</span>
+                      <div className="bg-emerald-50 rounded-lg p-3 mt-1">
+                        <p className="font-medium text-slate-900">{selectedLoad.unloadingLocation.place}</p>
+                        <p className="text-sm text-slate-600">
+                          {selectedLoad.unloadingLocation.district}, {selectedLoad.unloadingLocation.state}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-slate-600 text-sm">Loading Date:</span>
+                        <p className="font-medium text-slate-900">
+                          {new Date(selectedLoad.loadingDate).toLocaleDateString()}
+                        </p>
+                      </div>
+                      <div>
+                        <span className="text-slate-600 text-sm">Total Weight:</span>
+                        <p className="font-medium text-slate-900">
+                          {selectedLoad.materials?.reduce((sum, m) => sum + m.totalWeight, 0) || 0} kg
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <LoadTimeline
+                currentStatus={selectedLoad.status}
+                loadingDate={selectedLoad.loadingDate}
+                onStatusChange={handleStatusChange}
+                onSendMessage={handleSendMessage}
+                canUpdateStatus={false}
+                userRole="admin"
+              />
             </div>
           )}
         </Modal>

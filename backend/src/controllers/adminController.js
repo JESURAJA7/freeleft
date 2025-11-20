@@ -1392,7 +1392,64 @@ export const getWithoutXbowLoads = async (req, res) => {
   }
 };
 
+// get vehicle details by ID
+export const getVehicleById = async (req, res) => {
+  try {
+    const { vehicleId } = req.params;
+    console.log("Fetching vehicle with ID:", vehicleId);
+    const vehicle = await Vehicle.findById(vehicleId)
+   
+      .populate('ownerId', 'name email phone');
+      
+    if (!vehicle) {
+      return res.status(404).json({
+        success: false,
+        message: 'Vehicle not found'
+      });
+    }
+    
+    res.status(200).json({
+      success: true,
+      data: vehicle
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
+// update load assignment status
+export const updateLoadAssignmentStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+
+    const load = await LoadAssignment.findByIdAndUpdate(
+      req.params.id,
+      { status },
+      { new: true }
+    );
+
+    if (!load) {
+      return res.status(404).json({
+        success: false,
+        message: 'Load not found'
+      });
+    }
+
+    res.status(200).json({
+      success: true,
+      message: 'Load status updated successfully',
+      data: load
+    });
+  } catch (error) {
+    res.status(400).json({
+      success: false,
+      message: error.message
+    });
+  }
+};
 
 export default {
   getDashboardStats,

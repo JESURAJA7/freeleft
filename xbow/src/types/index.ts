@@ -134,7 +134,11 @@ export interface Load {
   paymentTerms: string;
   withXBowSupport?: boolean;
   status: string;
-  assignedVehicleId?: string;
+    assignedVehicleId?: string | {
+    _id: string;
+    ownerName?: string;
+    vehicleNumber?: string;
+  };
   commissionApplicable?: boolean;
   commissionAmount?: number;
   createdAt: string;

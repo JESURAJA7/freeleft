@@ -128,6 +128,13 @@ export const adminAPI = {
 
   //without xbow support
   getLoadsWithoutXBOWSupport: (params?: any) => adminApi.get(`${API_BASE_URL}/admin/loads-without-xbow-support`, { params }),
+
+  // get vehicle details
+  getVehicleById: (vehicleId: string) => adminApi.get(`${API_BASE_URL}/admin/vehicles/${vehicleId}`),
+
+  //update load status
+  updateLoadStatus: (loadId: string, data: { status: string; remarks?: string }) =>
+    adminApi.put(`${API_BASE_URL}/admin/loads/${loadId}/status`, data),
 };
 
 

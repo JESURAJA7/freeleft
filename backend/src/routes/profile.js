@@ -6,7 +6,8 @@ import {
   updateProfile,
   uploadImage,
   deleteImage,
-  getCompletionStats
+  getCompletionStats,
+  getMyLimits
 } from '../controllers/profileController.js';
 import { protect } from '../middleware/auth.js';
 import multer from 'multer';
@@ -41,6 +42,9 @@ router.delete('/delete-image',  deleteImage);
 
 // Admin routes
 router.get('/completion-stats', getCompletionStats);
+
+// Load provider routes
+router.get('/my-limits', getMyLimits);
 
 
 
