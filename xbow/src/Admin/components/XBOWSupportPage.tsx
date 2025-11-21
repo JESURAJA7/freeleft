@@ -58,6 +58,8 @@ export const XBOWSupportPage: React.FC = () => {
   const [priorityFilter, setPriorityFilter] = useState('all');
   const [assignmentMessage, setAssignmentMessage] = useState('');
 
+  console.log('Selected Load:', selectedLoad);
+
   // Add pagination hook
   const {
     currentPage,
@@ -214,11 +216,12 @@ export const XBOWSupportPage: React.FC = () => {
     try {
       setStatusLoading(true);
       setSelectedLoad(load);
-      console.log("Fetching vehicle details for ID:", load.assignedVehicleId);
+     //console.log("Fetching vehicle details for ID:", load.assignedVehicleId);
 
       const vehicleId = typeof load.assignedVehicleId === 'string' ? load.assignedVehicleId : load.assignedVehicleId._id;
 
       const response = await adminAPI.getVehicleById(vehicleId);
+     // console.log("Vehicle details response:", response);
       if (response.data.success) {
         setAssignedVehicle(response.data.data);
         setIsAssignedVehicleStatusModalOpen(true);
@@ -1026,6 +1029,18 @@ export const XBOWSupportPage: React.FC = () => {
                         <span className="text-slate-600 text-sm">Owner:</span>
                         <p className="font-medium text-slate-900">{assignedVehicle.ownerName}</p>
                       </div>
+                        <div>
+                        <span className="text-slate-600 text-sm">Email:</span>
+                        <p className="font-medium text-slate-900">{assignedVehicle.ownerId.email}</p>
+                      </div>
+                          <div>
+                        <span className="text-slate-600 text-sm">Pnone:</span>
+                        <p className="font-medium text-slate-900">{assignedVehicle.ownerId.phone}</p>
+                      </div>
+                          <div>
+                        <span className="text-slate-600 text-sm">Whatsapp :</span>
+                        <p className="font-medium text-slate-900">{assignedVehicle.ownerId.whatsappNumber}</p>
+                      </div>
                       <div>
                         <span className="text-slate-600 text-sm">Status:</span>
                         <span className={`inline-block px-2 py-1 rounded-full text-xs font-medium ${
@@ -1072,10 +1087,22 @@ export const XBOWSupportPage: React.FC = () => {
                     <MapPinIcon className="h-5 w-5 text-emerald-600" />
                     <h3 className="text-lg font-bold text-slate-900">Load Details</h3>
                   </div>
-                  <div className="space-y-4">
+                  <div className="space-y-4 grid grid-cols-2 gap-4">
                     <div>
                       <span className="text-slate-600 text-sm">Load Provider:</span>
                       <p className="font-medium text-slate-900">{selectedLoad.loadProviderName}</p>
+                    </div>
+                      <div>
+                      <span className="text-slate-600 text-sm">Email:</span>
+                      <p className="font-medium text-slate-900">{(selectedLoad.loadProviderId as User).email}</p>
+                    </div>
+                      <div>
+                      <span className="text-slate-600 text-sm">Phone:</span>
+                      <p className="font-medium text-slate-900">{(selectedLoad.loadProviderId as User).phone}</p>
+                    </div>
+                      <div>
+                      <span className="text-slate-600 text-sm">Whatsapp:</span>
+                      <p className="font-medium text-slate-900">{(selectedLoad.loadProviderId as User).whatsappNumber}</p>
                     </div>
 
                     <div>

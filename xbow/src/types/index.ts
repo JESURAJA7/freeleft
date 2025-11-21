@@ -171,6 +171,7 @@ export interface Vehicle {
   name: string;
   email: string;
   phone: number;
+  whatsappNumber: number;
 };
 
   ownerName: string;

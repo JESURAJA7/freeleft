@@ -42,8 +42,8 @@ import { CreateBiddingModal } from '../../components/Bidding/CreateBiddingModal'
 interface UserLimits {
   subscriptionStatus: 'trial' | 'premium' | 'expired';
   trialEndDate?: string;
-  maxLoads: number;
-  currentLoads: number;
+  maxLoadsAllowed: number;
+  loadsPosted: number;
   canCreateLoad: boolean;
 }
 
@@ -89,6 +89,7 @@ export const MyLoadsPage: React.FC = () => {
       setLimitsLoading(true);
       // Mock implementation - replace with actual API call
       const response = await profileAPI.getMyLimits();
+      console.log('User limits response:', response);
       
       if (response.data.success) {
         setUserLimits(response.data.data);
@@ -97,8 +98,8 @@ export const MyLoadsPage: React.FC = () => {
         setUserLimits({
           subscriptionStatus: 'trial',
           trialEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(), // 5 days from now
-          maxLoads: 3,
-          currentLoads: loads.length,
+          maxLoadsAllowed: 3,
+          loadsPosted: loads.length,
           canCreateLoad: loads.length < 3
         });
       }
@@ -108,8 +109,8 @@ export const MyLoadsPage: React.FC = () => {
       setUserLimits({
         subscriptionStatus: 'trial',
         trialEndDate: new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString(),
-        maxLoads: 3,
-        currentLoads: loads.length,
+        maxLoadsAllowed: 3,
+        loadsPosted: loads.length,
         canCreateLoad: loads.length < 3
       });
     } finally {
@@ -134,8 +135,8 @@ const calculateRemainingDays = (trialEndDate: string) => {
 
   const remainingDays = userLimits?.trialEndDate ? calculateRemainingDays(userLimits.trialEndDate) : null;
   const isTrialExpiring = remainingDays !== null && remainingDays <= 5 && userLimits?.subscriptionStatus === 'trial';
-  const hasReachedLimit = Boolean(userLimits && !userLimits.canCreateLoad);
-
+  const hasReachedLimit = Boolean(userLimits && userLimits.loadsPosted >= userLimits.maxLoadsAllowed);
+console.log('Has reached limit:', hasReachedLimit);
   const fetchLoads = async () => {
     try {
       setLoading(true);
@@ -150,7 +151,7 @@ const calculateRemainingDays = (trialEndDate: string) => {
           setUserLimits(prev => prev ? {
             ...prev,
             currentLoads: loadData.length,
-            canCreateLoad: loadData.length < prev.maxLoads
+            canCreateLoad: loadData.length < prev.maxLoadsAllowed
           } : prev);
         }
       } else {
@@ -392,16 +393,44 @@ const calculateRemainingDays = (trialEndDate: string) => {
             </div>
             
             {/* Create Load Button with Limit Check */}
-            <div className="flex items-center space-x-4">
-              {hasReachedLimit && (
-                <div className="text-sm text-orange-600 bg-orange-50 px-3 py-1 rounded-full border border-orange-200">
-                  {userLimits?.currentLoads}/{userLimits?.maxLoads} Loads Used
+            <div className="flex items-center space-x-10 ">
+                <div className="flex items-center space-x-7">
+                <div className="flex items-center bg-gradient-to-r from-indigo-600 to-blue-600 text-white px-4 py-2 rounded-2xl shadow-lg border border-indigo-300">
+                  <DocumentTextIcon className="h-5 w-5 mr-3" />
+                  <div className="text-left">
+                  <div className="text-xs md:text-sm opacity-90">Loads Used</div>
+                  <div className="text-lg md:text-2xl font-bold leading-none">
+                    {userLimits
+                    ? `${userLimits.loadsPosted}/${userLimits.maxLoadsAllowed}`
+                    : `${loads.length}/—`}
+                  </div>
+                  </div>
                 </div>
-              )}
+
+                {/* Compact progress bar to visually indicate usage */}
+                <div className="hidden md:flex flex-col w-44">
+                  <div className="text-xs text-slate-600 mb-1">Usage</div>
+                  <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden border border-slate-200">
+                  <div
+                    className={`h-full ${hasReachedLimit ? 'bg-red-500' : 'bg-emerald-500'}`}
+                    style={{
+                    width: `${
+                      userLimits && userLimits.maxLoadsAllowed
+                      ? Math.min(
+                        100,
+                        Math.round((userLimits.loadsPosted / userLimits.maxLoadsAllowed) * 100)
+                        )
+                      : 0
+                    }%`
+                    }}
+                  />
+                  </div>
+                </div>
+                </div>
               <Button
                 onClick={() => {
                   if (hasReachedLimit) {
-                    toast.error(`You've reached your limit of ${userLimits?.maxLoads} loads. Upgrade to premium for unlimited loads.`);
+                    toast.error(`You've reached your limit of ${userLimits?.maxLoadsAllowed} loads. Upgrade to premium for unlimited loads.`);
                     return;
                   }
                   window.location.href = '/post-load';
@@ -456,7 +485,7 @@ const calculateRemainingDays = (trialEndDate: string) => {
                   <div>
                     <h3 className="font-semibold">Load Limit Reached!</h3>
                     <p className="text-red-100">
-                      You've reached your maximum limit of {userLimits.maxLoads} loads. 
+                      You've reached your maximum limit of {userLimits.maxLoadsAllowed} loads. 
                       {userLimits.subscriptionStatus === 'trial' ? ' Upgrade to premium for unlimited loads.' : ' Upgrade your plan for more loads.'}
                     </p>
                   </div>
@@ -546,7 +575,7 @@ const calculateRemainingDays = (trialEndDate: string) => {
               value: loads.length, 
               color: 'blue', 
               icon: DocumentTextIcon,
-              limit: userLimits ? `${userLimits.currentLoads}/${userLimits.maxLoads}` : undefined
+              limit: userLimits ? `${userLimits.loadsPosted}/${userLimits.maxLoadsAllowed}` : undefined
             },
             { 
               label: 'Active', 

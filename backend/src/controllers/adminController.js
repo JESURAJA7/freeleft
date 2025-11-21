@@ -1396,10 +1396,10 @@ export const getWithoutXbowLoads = async (req, res) => {
 export const getVehicleById = async (req, res) => {
   try {
     const { vehicleId } = req.params;
-    console.log("Fetching vehicle with ID:", vehicleId);
+   //onsole.log("Fetching vehicle with ID:", vehicleId);
     const vehicle = await Vehicle.findById(vehicleId)
    
-      .populate('ownerId', 'name email phone');
+      .populate('ownerId', 'name email phone whatsappNumber');
       
     if (!vehicle) {
       return res.status(404).json({
